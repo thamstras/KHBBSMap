@@ -1,0 +1,9 @@
+rg_03
+flowerbed 2, 6, 10, 14, 18
+All have 6th bit set
+
+22 is a decal with that set as well
+as does the waterfall (27)
+Castle gates have no flag
+
+dp_01
