@@ -63,10 +63,10 @@ FileManager::FileManager()
 
 	if (foundResouces)
 	{
-		rootPath = currentPath;
-		resourcesPath = currentPath.append("resources");
+		rootPath = fs::canonical(currentPath);
+		resourcesPath = fs::canonical(currentPath.append("resources"));
 
-		std::cout << "[FS] Root found at " << currentPath << std::endl;
+		std::cout << "[FS] Root found at " << rootPath << std::endl;
 		std::cout << "[FS] Resources found at " << resourcesPath << std::endl;
 	}
 	else
@@ -118,6 +118,8 @@ void FileManager::GetShaderCPath(const std::string& shaderName, char* buffer, si
 
 bool FileManager::OpenFileWindow(std::string& out_filePath)
 {
+	fs::path orignalPath = fs::current_path();
+	
 	TCHAR filename[MAX_PATH];
 	OPENFILENAME ofn;
 
@@ -148,8 +150,11 @@ bool FileManager::OpenFileWindow(std::string& out_filePath)
 	if (GetOpenFileName(&ofn))
 	{
 		//out_filePath = std::string(filename);
-		fs::path path = fs::path(filename);
-		out_filePath = path.string();
+		fs::path openPath = fs::path(filename);
+		openPath = fs::absolute(openPath);
+		out_filePath = openPath.string();
+		fs::current_path(orignalPath);
+		std::cout << "[FS] Open file: " << openPath << std::endl;
 		return true;
 	}
 	else
@@ -174,6 +179,7 @@ bool FileManager::OpenFileWindow(std::string& out_filePath)
 			default: std::cout << "[FS] File open cancelled.\n";
 		}
 
+		fs::current_path(orignalPath);
 		return false;
 	}
 
