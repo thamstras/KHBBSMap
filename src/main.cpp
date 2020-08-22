@@ -54,6 +54,8 @@ double g_worldTime = 0.0f;
 
 bool gui_show_metrics = false;
 
+bool g_loadNewMap = false;
+
 // #### CALLBACKS ####
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -282,7 +284,7 @@ void gui_DrawOpenFileModal()
 	}
 }
 
-void gui_DrawSystemGui()
+void gui_DrawSystemGui(FileManager fileManager)
 {
 	// 'System' info window
 	ImGui::Begin("System");
@@ -316,19 +318,27 @@ void gui_DrawSystemGui()
 	// System Gui (toolbar etc.)
 	bool shouldOpenFile = false;
 	bool shouldCloseFile = false;
+	bool shouldExit = false;
 
 	ImGui::BeginMainMenuBar();
 	
 	if (ImGui::BeginMenu("File")) {
 		if (ImGui::MenuItem("Open...")) shouldOpenFile = true;
-		if (ImGui::MenuItem("Close")) shouldCloseFile = true;
+		//if (ImGui::MenuItem("Close")) shouldCloseFile = true;
 		ImGui::Separator();
-		ImGui::MenuItem("Exit");
+		if (ImGui::MenuItem("Exit")) shouldExit = true;
 		ImGui::EndMenu();
 	}
 
 	//if (shouldOpenFile) ImGui::OpenPopup("OpenFileModal");
-	
+
+	if (shouldExit) glfwSetWindowShouldClose(g_window.window, true);
+
+	if (shouldOpenFile)
+	{
+		g_loadNewMap = true;
+	}
+
 	ImGui::EndMainMenuBar();
 
 	// Modals
@@ -429,6 +439,24 @@ void gui_endSplash()
 	// TODO: delete texture
 }
 
+void LoadNewMap(FileManager fileManager, RenderContext renderContext)
+{
+	std::string newFile;
+	if (fileManager.OpenFileWindow(newFile))
+	{
+		UnloadBBSMap();
+		LoadBBSMap(newFile);
+		ParseLoadedMap();
+		LoadMapTextures();
+		LoadMapObjects();
+
+		renderContext.debug_obj_id = 0;
+		renderContext.debug_section_id = 0;
+
+		g_camera.Reset(glm::vec3(0.0f, 1.5f, -3.0f));
+	}
+}
+
 // #### MAIN ####
 int main(int argc, char **argv)
 {	
@@ -509,7 +537,7 @@ int main(int argc, char **argv)
 		
 		RenderBBSMap(globalRenderContext);
 
-		gui_DrawSystemGui();
+		gui_DrawSystemGui(fileManager);
 
 		if (gui_show_map_data) gui_MapData();
 		if (gui_show_data_viewer) gui_loaded_data();
@@ -525,6 +553,12 @@ int main(int argc, char **argv)
 
 		glfwSwapBuffers(g_window.window);
 		glfwPollEvents();
+
+		if (g_loadNewMap)
+		{
+			g_loadNewMap = false;
+			LoadNewMap(fileManager, globalRenderContext);
+		}
 
 	}
 

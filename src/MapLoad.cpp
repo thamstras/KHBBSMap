@@ -1068,3 +1068,29 @@ void LoadBBSMap(std::string filepath)
 	g_fbuf = filebuffer;
 
 }
+
+void UnloadBBSMap()
+{
+	for (auto& mesh : render_meshes)
+	{
+		delete mesh;
+		mesh = nullptr;
+	}
+	render_meshes.clear();
+
+	for (auto& tex : render_textures)
+	{
+		if (tex.second && tex.second->isLoaded()) tex.second->ogl_unload();
+		delete (tex.second);
+		tex.second = nullptr;
+	}
+	render_textures.clear();
+
+	map_textures.clear();
+	map_objects.clear();
+	tex_index = nullptr;
+	obj_index = nullptr;
+	header = nullptr;
+	free(g_fbuf);
+	g_fbuf = nullptr;
+}

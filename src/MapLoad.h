@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include "Render.h"
+void UnloadBBSMap();
 void LoadBBSMap(std::string filepath);
 void ParseLoadedMap();
 void LoadMapTextures();
