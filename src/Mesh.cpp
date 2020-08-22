@@ -303,11 +303,15 @@ void Mesh::Draw(RenderContext& context)
 	static const std::string uniform_view_name = "view";
 	static const std::string uniform_projection_name = "projection";
 	
+	bool flipFace = false;
+
 	glm::quat rot = glm::quat(rotation);
 	glm::mat4 model = glm::mat4(1.0f);
 	model = glm::translate(model, position);
 	model = glm::rotate(model, glm::angle(rot), glm::axis(rot));
 	model = glm::scale(model, scale);
+
+	if (glm::determinant(glm::mat3(model)) < 0.0f) flipFace = true;
 
 	Shader *shader;
 	Shader *sectionShader;
@@ -372,6 +376,8 @@ void Mesh::Draw(RenderContext& context)
 	if (flags.isSkybox /*| flags.isDecal*/)
 		glDepthMask(GL_FALSE);
 	
+	if (flipFace) glFrontFace(GL_CW);
+
 	//for (auto& section : sections)
 	for (int i = 0; i < sections.size(); i++)
 	{
@@ -419,6 +425,8 @@ void Mesh::Draw(RenderContext& context)
 
 	if (flags.isSkybox /*| flags.isDecal*/)
 		glDepthMask(GL_TRUE);
+
+	if (flipFace) glFrontFace(GL_CCW);
 }
 
 void Mesh::SetPosRotScale(glm::vec3 pos, glm::vec3 rot, glm::vec3 scale)
