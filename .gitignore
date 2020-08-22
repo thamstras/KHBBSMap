@@ -2,5 +2,6 @@ bin/
 build/
 oldsrc/
 imgui-master/
+release/
 *.pmp
 imgui.ini
