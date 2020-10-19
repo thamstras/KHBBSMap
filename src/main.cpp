@@ -269,6 +269,7 @@ void Render_StartFrame(RenderContext& context)
 	//context.highlight_shader->use();
 	//context.highlight_shader->setVec4("color", context.debug_highlight_color);
 	std::shared_ptr<Shader> highlightShader = context.shaderLibrary->GetShader(context.highlight_shader);
+	highlightShader->use();
 	highlightShader->setVec4("color", context.debug_highlight_color);
 }
 

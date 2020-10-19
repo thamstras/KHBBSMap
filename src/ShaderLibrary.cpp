@@ -23,6 +23,9 @@ bool ShaderLibrary::AddShader(ShaderDef& shaderDef)
 
 	auto ptr = std::make_shared<Shader>(shaderDef.vertexShaderPath.c_str(), shaderDef.fragmentShaderPath.c_str());
 	auto res = m_shaderMap.emplace(shaderDef.shaderName, ptr);
+
+	std::cout << "[Shader Library] Added Shader " << shaderDef.shaderName << std::endl;
+
 	return res.second;
 }
 
