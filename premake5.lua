@@ -1,10 +1,11 @@
 
 -- NOTE: Requires at least Premake5 alpha 15 for ccpdialect and vs2019 support.
 
- -- NOTE: I built GLFW from source. If you're using a binary distribution you may need to change some paths down below.
+ -- NOTE: I built GLFW and ASSIMP from source. If you're using a binary distribution you may need to change some paths down below.
 GLFW_PATH = "C:/Repos/Libraries/glfw/3.3-dll/"
 GLM_PATH = "C:/Repos/Libraries/glm/0.9.9.6/"
 GLI_PATH = "C:/Repos/Libraries/gli/0.8.2.0/"
+ASSIMP_PATH = "C:/Repos/Libraries/assimp/5.0.1/"
 
 
 workspace "KHBBSMap" 
@@ -27,6 +28,16 @@ workspace "KHBBSMap"
         targetdir "bin"
         --debugdir "./" -- TODO: This doesn't give the right results and the .user file overrides it once generated.
                         --       Also, now rendered irrelevent by the new FileManager search functionality.
+		
+		filter "configurations:Debug"
+            defines {"DEBUG"} 
+            symbols "on" 
+            optimize "off" 
+
+        filter "configurations:Release"
+            defines {"NDEBUG"} 
+            optimize "on"
+		filter({})
 		
 		-- GLM
         includedirs(GLM_PATH)
@@ -54,12 +65,17 @@ workspace "KHBBSMap"
         filter "files:**.c" -- TODO: make this only effect glad.c
             flags { "NoPCH" } 
         filter ({})
-
-        filter "configurations:Debug"
-            defines {"DEBUG"} 
-            symbols "on" 
-            optimize "off" 
-
-        filter "configurations:Release"
-            defines {"NDEBUG"} 
-            optimize "on" 
+		
+		-- ASSIMP
+		includedirs(ASSIMP_PATH .. "include")
+		filter("configurations:Debug")
+			links("assimp-vc141-mtd")
+			postbuildcommands("{COPY} " .. ASSIMP_PATH .. "bin/Debug/assimp-vc141-mtd.dll %{cfg.targetdir}")
+			postbuildcommands("{COPY} " .. ASSIMP_PATH .. "bin/Debug/assimp-vc141-mtd.pdb %{cfg.targetdir}")
+			libdirs(ASSIMP_PATH .. "lib/Debug")
+		filter("configurations:Release")
+			links("assimp-vc141-mt")
+			postbuildcommands("{COPY} ".. ASSIMP_PATH .. "bin/RelWithDebInfo/assimp-vc141-mt.dll %{cfg.targetdir}")
+			libdirs(ASSIMP_PATH .. "lib/RelWithDebInfo")
+		filter({})
+		

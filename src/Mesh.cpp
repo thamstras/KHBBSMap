@@ -3,104 +3,6 @@
 #include "glm/gtc/quaternion.hpp"
 
 
-VertexFormat SelectFormat(VFLocationSpecifier location, VFColourSpecifier colour, VFTextureSpecifier texture)
-{
-	switch (location)
-	{
-	case LOC_NONE:
-		switch (colour)
-		{
-		case COL_NONE:
-			switch (texture)
-			{
-			case TEX_NONE:
-				break;
-			case TEX_2FLOAT:
-				break;
-			}
-			break;
-		case COL_4FLOAT:
-			switch (texture)
-			{
-			case TEX_NONE:
-				break;
-			case TEX_2FLOAT:
-				break;
-			}
-			break;
-		case COL_3UBYTE:
-			switch (texture)
-			{
-			case TEX_NONE:
-				break;
-			case TEX_2FLOAT:
-				break;
-			}
-			break;
-		}
-		break;
-	case LOC_3FLOAT:
-		switch (colour)
-		{
-		case COL_NONE:
-			switch (texture)
-			{
-			case TEX_NONE:
-				return VF_L3F;
-			case TEX_2FLOAT:
-				return VF_L3F_T2F;
-			}
-			break;
-		case COL_4FLOAT:
-			switch (texture)
-			{
-			case TEX_NONE:
-				return VF_L3F_C4F;
-				break;
-			case TEX_2FLOAT:
-				return VF_L3F_C4F_T2F;
-				break;
-			}
-			break;
-		case COL_3UBYTE:
-			switch (texture)
-			{
-			case TEX_NONE:
-				return VF_L3F_C3UB;
-				break;
-			case TEX_2FLOAT:
-				return VF_L3F_C3UB_T2F;
-				break;
-			}
-			break;
-		}
-		break;
-	}
-
-	return VF_INVALID;
-}
-
-size_t VFSize(VertexFormat vf)
-{
-	switch (vf)
-	{
-	case VF_INVALID:
-		return 0;
-	case VF_L3F:
-		return (3 * sizeof(float));
-	case VF_L3F_C4F:
-		return (3 * sizeof(float) + 4 * sizeof(float));
-	case VF_L3F_C3UB:
-		return (3 * sizeof(float) + 3);
-	case VF_L3F_T2F:
-		return (3 * sizeof(float) + 2 * sizeof(float));
-	case VF_L3F_C4F_T2F:
-		return (3 * sizeof(float) + 4 * sizeof(float) + 2 * sizeof(float));
-	case VF_L3F_C3UB_T2F:
-		return (3 * sizeof(float) + 3 + 2 * sizeof(float));
-	}
-}
-
 MeshBuilder::MeshBuilder()
 {
 	current_vert.Reset();
@@ -115,7 +17,7 @@ void MeshBuilder::BeginSection(GLenum primative_type, Texture *texture)
 	current_texture = texture;
 }
 
-void MeshBuilder::EndSection()
+void MeshBuilder::EndSection(PMO_MESH_HEADER* raw)
 {
 	size_t vert_count = vert_list.size();
 	std::vector<float> dat;
@@ -134,7 +36,7 @@ void MeshBuilder::EndSection()
 	}
 
 	//MeshSection(vert_count, dat.data(), current_primative);
-	child->AddSection(vert_count, dat.data(), current_primative, current_texture);
+	child->AddSection(vert_count, dat.data(), current_primative, current_texture, raw);
 }
 
 void MeshBuilder::TexUV2f(float * uv)
@@ -195,13 +97,15 @@ Mesh *MeshBuilder::Finish()
 	return child;
 }
 
-MeshSection::MeshSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture)
+MeshSection::MeshSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture, PMO_MESH_HEADER* raw)
 {
 	this->vert_count = vertex_count;
 	vert_data = (float *)malloc(vertex_count * 10 * sizeof(float));
 	memcpy(vert_data, data, vertex_count * 10 * sizeof(float));
 	this->draw_primative = primative_type;
 	this->texture = texture;
+	this->raw = raw;
+	this->twoSided = raw->unknown0x0A[0] & 0x05;	// 0x04 or 0x01 seem to indicate two-sided
 
 	setup_ogl();
 }
@@ -234,7 +138,7 @@ void MeshSection::setup_ogl()
 
 }
 
-void MeshSection::Draw(glm::mat4& model, RenderContext& context, Shader *shader)
+void MeshSection::Draw(glm::mat4& model, RenderContext& context, std::shared_ptr<Shader> shader)
 {
 	// TODO: Change the Shader interface to use raw c strings.
 	// Passing string constants into the Shader interface causes a
@@ -261,9 +165,12 @@ void MeshSection::Draw(glm::mat4& model, RenderContext& context, Shader *shader)
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texid);
 	shader->setInt(uniform_texture_name, 0);
+	if (twoSided) glDisable(GL_CULL_FACE);
 
 	glBindVertexArray(VAO);
 	glDrawArrays(draw_primative, 0, vert_count);
+
+	if (twoSided && !context.render_no_cull) glEnable(GL_CULL_FACE);
 
 	context.stat_draw_calls += 1;
 	if (draw_primative == GL_TRIANGLES)
@@ -274,9 +181,30 @@ void MeshSection::Draw(glm::mat4& model, RenderContext& context, Shader *shader)
 
 void MeshSection::gui_PrintDetails()
 {
-	ImGui::Text("Primative: %s", draw_primative == GL_TRIANGLES ? "TRIANGLES" : "TRIANGLE_STRIP");
-	ImGui::SameLine();
-	ImGui::Text("Vertex Count: %d", vert_count);
+	//ImGui::Text("Primative: %s", draw_primative == GL_TRIANGLES ? "TRIANGLES" : "TRIANGLE_STRIP");
+	//ImGui::SameLine();
+	//ImGui::Text("Vertex Count: %d", vert_count);
+	ImGui::Text("Vertex Count: %d", raw->vertexCount);
+	ImGui::Text("Vertex size: %d", raw->vertexSize);
+	if (ImGui::TreeNode("flags", "Flags: 0x%08X", raw->dataFlags))
+	{
+		ImGui::Text("Type: %d", raw->dataFlags.primative);
+		ImGui::Text("Unknown: %01X", raw->dataFlags.unk);
+		ImGui::Text("Diffuse: %d", raw->dataFlags.diffuse);
+		ImGui::Text("Skip Transform: %d", raw->dataFlags.skipTransform);
+		ImGui::Text("Morph Weights: %d", raw->dataFlags.morphing);
+		ImGui::Text("Skinning Weights: %d", raw->dataFlags.skinning);
+		ImGui::Text("Index Format: %d", raw->dataFlags.index);
+		ImGui::Text("Weights Format: %d", raw->dataFlags.weights);
+		ImGui::Text("Position Format: %d", raw->dataFlags.position);
+		ImGui::Text("Normal Format: %d", raw->dataFlags.normal);
+		ImGui::Text("Color Format: %d", raw->dataFlags.color);
+		ImGui::Text("TexCoord: %d", raw->dataFlags.texCoord);
+		ImGui::TreePop();
+	}
+	ImGui::Text("Unk0x08: 0x%02X", raw->unknown0x08);
+	ImGui::Text("Unk0x0A: 0x%02X 0x%02X", raw->unknown0x0A[0], raw->unknown0x0A[1]);
+	ImGui::Separator();
 }
 
 Mesh::Mesh()
@@ -291,9 +219,9 @@ Mesh::~Mesh()
 	sections.clear();
 }
 
-void Mesh::AddSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture)
+void Mesh::AddSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture, PMO_MESH_HEADER* raw)
 {
-	MeshSection *section = new MeshSection(vertex_count, data, primative_type, texture);
+	MeshSection *section = new MeshSection(vertex_count, data, primative_type, texture, raw);
 	sections.push_back(section);
 }
 
@@ -313,8 +241,8 @@ void Mesh::Draw(RenderContext& context)
 
 	if (glm::determinant(glm::mat3(model)) < 0.0f) flipFace = true;
 
-	Shader *shader;
-	Shader *sectionShader;
+	std::shared_ptr<Shader> shader;
+	std::shared_ptr<Shader> sectionShader;
 
 	
 	if (context.debug_active && context.debug_obj_id == mesh_idx)
@@ -322,11 +250,11 @@ void Mesh::Draw(RenderContext& context)
 		if (context.debug_section)
 		{
 			if (context.debug_highlight)
-				sectionShader = context.highlight_shader;
+				sectionShader = context.shaderLibrary->GetShader(context.highlight_shader);
 			else if (context.debug_no_texture)
-				sectionShader = context.textureless_shader;
+				sectionShader = context.shaderLibrary->GetShader(context.textureless_shader);
 			else
-				sectionShader = context.default_shader;
+				sectionShader = context.shaderLibrary->GetShader(context.default_shader);
 
 			// preload sectionShader uniforms
 			sectionShader->use();
@@ -337,16 +265,16 @@ void Mesh::Draw(RenderContext& context)
 				sectionShader->setMat4(uniform_view_name, context.render_viewMatrix);
 			sectionShader->setMat4(uniform_projection_name, context.render_projectionMatrix);
 
-			shader = context.default_shader;
+			shader = context.shaderLibrary->GetShader(context.default_shader);
 		}
 		else
 		{
 			if (context.debug_highlight)
-				shader = context.highlight_shader;
+				shader = context.shaderLibrary->GetShader(context.highlight_shader);
 			else if (context.debug_no_texture)
-				shader = context.textureless_shader;
+				shader = context.shaderLibrary->GetShader(context.textureless_shader);
 			else
-				shader = context.default_shader;
+				shader = context.shaderLibrary->GetShader(context.default_shader);
 
 			if (context.debug_wireframe)
 				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -358,11 +286,11 @@ void Mesh::Draw(RenderContext& context)
 	}
 	else if (context.render_no_texture)
 	{
-		shader = context.textureless_shader;
+		shader = context.shaderLibrary->GetShader(context.textureless_shader);
 	}
 	else
 	{
-		shader = context.default_shader;
+		shader = context.shaderLibrary->GetShader(context.default_shader);
 	}
 
 	shader->use();
@@ -383,7 +311,7 @@ void Mesh::Draw(RenderContext& context)
 	{
 		MeshSection *section = sections[i];
 
-		Shader *useShader = shader;
+		std::shared_ptr<Shader> useShader = shader;
 
 		bool useSectionShader = context.debug_active && context.debug_section
 			&& context.debug_obj_id == mesh_idx && context.debug_section_id == i;
@@ -453,8 +381,16 @@ bool Mesh::GetIsSkybox()
 
 void Mesh::gui_ListSections()
 {
-	for (auto s : sections)
+	/*for (auto s : sections)
 	{
 		s->gui_PrintDetails();
+	}*/
+	for (int s = 0; s < sections.size(); s++)
+	{
+		if (ImGui::TreeNode((void*)(intptr_t)s, "Section %d", s))
+		{
+			sections[s]->gui_PrintDetails();
+			ImGui::TreePop();
+		}
 	}
 }

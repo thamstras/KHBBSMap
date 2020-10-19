@@ -4,44 +4,15 @@
 #include <cstdint>
 #include "Texture.h"
 #include "Render.h"
-
-enum VertexFormat
-{
-	VF_INVALID,
-	VF_L3F,				// Location (3 floats)
-	VF_L3F_C4F,			// Location (3 floats)	Colour (4 floats)			
-	VF_L3F_C3UB,		// Location (3 floats)	Colour (3 UBytes)
-	VF_L3F_T2F,			// Location (3 floats)	Texture (2 floats)
-	VF_L3F_C4F_T2F,		// Location (3 floats)	Colour (4 floats)	Texture (2 floats)
-	VF_L3F_C3UB_T2F,	// Location (3 floats)	Colour (3 UBytes)	Texture (2 floats)
-};
-
-enum VFLocationSpecifier
-{
-	LOC_NONE,
-	LOC_3FLOAT,
-};
-
-enum VFColourSpecifier
-{
-	COL_NONE,
-	COL_4FLOAT,
-	COL_3UBYTE,
-};
-
-enum VFTextureSpecifier
-{
-	TEX_NONE,
-	TEX_2FLOAT,
-};
-
-VertexFormat SelectFormat(VFLocationSpecifier location, VFColourSpecifier colour, VFTextureSpecifier texture);
+#include "BBSTypes.h"
 
 struct OmniVert
 {
 	float x, y, z, w;
 	float r, g, b, a;
 	float u, v;
+
+	OmniVert() { Reset(); }
 
 	void Reset()
 	{
@@ -57,10 +28,10 @@ struct OmniVert
 class MeshSection
 {
 public:
-	MeshSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture);
+	MeshSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture, PMO_MESH_HEADER* raw);
 	~MeshSection();
 
-	void Draw(glm::mat4& model, RenderContext& context, Shader *shader);
+	void Draw(glm::mat4& model, RenderContext& context, std::shared_ptr<Shader> shader);
 	void gui_PrintDetails();
 private:
 	unsigned int vert_count;
@@ -70,6 +41,9 @@ private:
 	GLuint VBO, VAO;
 	GLenum draw_primative;
 	Texture *texture;
+	bool twoSided;
+
+	PMO_MESH_HEADER* raw;
 };
 
 struct MeshFlags
@@ -86,7 +60,7 @@ public:
 
 	int mesh_idx;
 
-	void AddSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture);
+	void AddSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture, PMO_MESH_HEADER* raw);
 	void Draw(RenderContext& context);
 	void SetPosRotScale(glm::vec3 pos, glm::vec3 rot, glm::vec3 scale);
 	void SetFlags(MeshFlags flags);
@@ -108,7 +82,7 @@ public:
 	MeshBuilder();
 
 	void BeginSection(GLenum primative_type, Texture *texture);
-	void EndSection();
+	void EndSection(PMO_MESH_HEADER* raw);
 	
 	void TexUV2f(float *uv);
 	void Color4f(float *clr);

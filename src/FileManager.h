@@ -14,6 +14,7 @@ public:
 	void GetShaderCPath(const std::string& shaderName, char* buffer, size_t buffer_len);
 
 	bool OpenFileWindow(std::string& out_filePath);
+	bool GetExportFolder(std::string& out_path);
 
 private:
 	std::filesystem::path rootPath;

@@ -11,7 +11,7 @@ size_t PixelFormatSize(PixelFormat pf)
 	return -1; // This will def cause an alloc error.
 }
 
-Texture::Texture(uint32_t width, uint32_t height, uint8_t *data, PixelFormat format)
+Texture::Texture(uint32_t width, uint32_t height, uint8_t *data, PixelFormat format, void* userPtr)
 {
 	this->width = width;
 	this->height = height;
@@ -31,6 +31,8 @@ Texture::Texture(uint32_t width, uint32_t height, uint8_t *data, PixelFormat for
 
 	ogl_texid = 0;
 	ogl_loaded = false;
+
+	this->userPtr = userPtr;
 }
 
 Texture::~Texture()

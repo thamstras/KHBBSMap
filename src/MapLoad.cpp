@@ -7,239 +7,11 @@
 #include "Mesh.h"
 #include <algorithm>
 
-// Most of this pragma section comes from revel8n's BBS neosis plugin
-#pragma pack(push, 1)
+// FLAGS NOT FOUND:
+//	Culling Order,
+//	Texture mapping: http://hitmen.c02.at/files/yapspd/psp_doc/index.html#idx11.5.153
 
-typedef  uint8_t	uint8;
-typedef  uint16_t	uint16;
-typedef  uint32_t	uint32;
-typedef  uint64_t	uint64;
-typedef  int8_t		int8;
-typedef  int16_t	int16;
-typedef  int32_t    int32;
-typedef  int64_t	int64;
-
-enum GsPSM
-{
-	// Pixel Storage Format (0 = 32bit RGBA)
-
-	GS_PSMCT32 = 0,
-	GS_PSMCT24 = 1,
-	GS_PSMCT16 = 2,
-	GS_PSMCT16S = 10,
-	GS_PSMT8 = 19,
-	GS_PSMT4 = 20,
-	GS_PSMT8H = 27,
-	GS_PSMT4HL = 36,
-	GS_PSMT4HH = 44,
-	GS_PSMZ32 = 48,
-	GS_PSMZ24 = 49,
-	GS_PSMZ16 = 50,
-	GS_PSMZ16S = 58,
-};
-
-enum IMG_TYPE
-{
-	IT_RGBA = 3,
-	IT_CLUT4 = 4,
-	IT_CLUT8 = 5,
-};
-
-enum CLT_TYPE
-{
-	CT_NONE = 0,
-	CT_A1BGR5 = 1,
-	CT_XBGR8 = 2,
-	CT_ABGR8 = 3,
-};
-
-typedef struct
-{
-	uint64 TBP0 : 14; // Texture Buffer Base Pointer (Address/256)
-	uint64 TBW : 6; // Texture Buffer Width (Texels/64)
-	uint64 PSM : 6; // Pixel Storage Format (0 = 32bit RGBA)
-	uint64 TW : 4; // width = 2^TW
-	uint64 TH : 4; // height = 2^TH
-	uint64 TCC : 1; // 0 = RGB, 1 = RGBA
-	uint64 TFX : 2; // TFX  - Texture Function (0=modulate, 1=decal, 2=hilight, 3=hilight2)
-	uint64 CBP : 14; // CLUT Buffer Base Pointer (Address/256)
-	uint64 CPSM : 4; // CLUT Storage Format
-	uint64 CSM : 1; // CLUT Storage Mode
-	uint64 CSA : 5; // CLUT Offset
-	uint64 CLD : 3; // CLUT Load Control
-} GsTex0;
-
-// TM2 File Structure
-
-struct TM2_HEADER
-{
-	char   fileID[4]; // usually 'TIM2' or 'CLT2'
-	uint8  version;   // format version
-	uint8  id;        // format id
-	uint16 imageCount;
-	uint32 padding[2];
-};
-
-struct TM2_PICTURE_HEADER
-{
-	// 0x00
-	uint32 totalSize;
-	uint32 clutSize;
-	uint32 imageSize;
-	uint16 headerSize;
-	uint16 clutColors;
-	// 0x10
-	uint8  format;
-	uint8  mipMapCount;
-	uint8  clutType;
-	uint8  imageType;
-	uint16 width;
-	uint16 height;
-
-	GsTex0 GsTex0b; //[8];
-	// 0x20
-	GsTex0 GsTex1b; //[8];
-	uint32 GsRegs;
-	uint32 GsTexClut;
-};
-
-struct PMO_TEXTURE_HEADER
-{
-	// 0x00
-	uint32 dataOffset;
-	char   resourceName[0x0C];
-	// 0x10
-	uint32 unknown0x10[4];
-};
-
-struct PMO_JOINT
-{
-	uint16 index;
-	uint16 padding0;
-
-	uint16 parent;
-	uint16 padding1;
-
-	uint16 unknown0x08; // skinning index?
-	uint16 padding2;
-
-	uint32 unknown0x0C;
-
-	// 0x10
-	char   name[0x10];
-// 0x20
-float  transform[16];
-float  transformInverse[16];
-};
-
-struct PMO_SKEL_HEADER
-{
-	char   dataTag[4]; // 'BON'
-	uint32 unknown0x04;
-	uint32 jointCount;
-	uint16 unknown0x0C; // number of skinned joints?
-	uint16 unknown0x0E; // skinning start index
-};
-
-struct PMO_MESH_HEADER
-{
-	// 0x00
-	uint16 vertexCount;
-	uint8  textureID;
-	uint8  vertexSize;
-
-	struct
-	{
-		uint32 texCoord : 2; // texture coordinate format: 0 - none, 1 - uint8, 2 - uint16, 3 - float
-		uint32 unknown9 : 2; //
-		uint32 unknown0 : 3; // unsure of bit size, but when this is not zero, diffuse color is present in vertex data
-		uint32 position : 2; // position format: 0 - none, 2 - int16, 3 - float
-		uint32 skinning : 1; // only seems to be set when there are joint weights present?
-		uint32 unknown1 : 4;
-		uint32 jointCnt : 4; // maximum joint index used? (index count = joint count + 1 - or just use (jointCnt + skinning)
-		uint32 unknown2 : 6;
-		uint32 diffuse : 1; // seems to only be set when a diffuse color is present in header
-		uint32 unknown3 : 3;
-		uint32 dataType : 4; // 0x30 - tri-list, 0x40 - tri-strip - ?
-	} dataFlags;
-
-	uint8  unknown0x08;
-	uint8  triStripCount;
-	uint8  unknown0x0A[2];
-};
-
-struct PMO_HEADER
-{
-	// 0x00
-	char   fileTag[4]; // 'PMO'
-	uint8  unknown0x04[4];
-	uint16 textureCount; //
-	uint16 unknown0x0A;
-	uint32 skeletonOffset;
-	// 0x10
-	uint32 meshOffset0;
-	uint16 triangleCount;
-	uint16 vertexCount;
-	float  modelScale;
-	uint32 meshOffset1;
-	// 0x20
-	float  boundingBox[8][4];
-};
-
-struct PMP_HDR
-{	
-	char magic[4];
-	uint32 unk_04;
-	uint32 unk_08;
-	uint32 unk_0C;
-	uint16 obj_count;
-	uint16 unk_12;
-	uint32 unk_14;
-	uint16 unk_18;
-	uint16 tex_count;
-	uint32 tex_index_offset;
-};
-
-struct ObjFlags
-{
-	uint16 isSkybox : 1;	// render this object as part of the skybox
-	uint16 unknown0 : 1;	// not seen yet
-	uint16 unknown1 : 1;	// set on floors. Recieve shadow?
-	uint16 unknown2 : 1;	// something alpha related?										<|
-	uint16 unknown3 : 1;	// unkown, used on flower beds, so probably also alpha related.	<-- BLEND MODE?
-	uint16 unknown4 : 1;	// something else alpha related.								<|
-	uint16 unknown5 : 1;	
-	uint16 unknown6 : 1;
-
-	uint16 unknown7 : 1;
-	uint16 unknown8 : 1;
-	uint16 unknown9 : 1;
-	uint16 unknownA : 1;
-	uint16 unknownB : 1;
-	uint16 unknownC : 1;
-	uint16 unknownD : 1;
-	uint16 unknownE : 1;
-};
-
-struct OBJ_ENTRY
-{
-	float loc[3];
-	float rot[3];
-	float scale[3];
-	uint32 offset;
-	uint32 unk_28;	// Seems to always be 0
-	//uint32 unk_2C;
-	uint16 flags;
-	uint16 unk_2E; 	// Probably an object id number
-};
-
-struct TEX_ENTRY
-{
-	uint32 offset;
-	char name[28];
-};
-
-#pragma pack(pop)
+#include "BBSTypes.h"
 
 std::string mapname = "";
 char * g_fbuf = nullptr;
@@ -256,6 +28,7 @@ std::vector<Mesh *> render_meshes;
 
 Texture *g_dummyTexture = nullptr;
 uint16 g_flagsSeen = 0;
+uint8 g_maxTexPathLen = 0;
 
 // tex viewer
 std::string tex_target = "";
@@ -358,6 +131,17 @@ void gui_tex_view()
 	ImGui::Text("Width: %d", target->getWidth());
 	ImGui::Text("Height: %d", target->getHeight());
 	ImGui::SliderFloat("Scale", &tex_scale, 0.0f, 4.0f);
+	if (target->userPtr)
+	{
+		if (ImGui::TreeNode("TIM"))
+		{
+			TM2_HEADER* hdr1 = (TM2_HEADER*)target->userPtr;
+			TM2_PICTURE_HEADER* hdr2 = (TM2_PICTURE_HEADER*)(hdr1 + 1);
+			ImGui::Text("Image Type: %d", hdr2->imageType);
+			ImGui::Text("Clut Type: %d", hdr2->clutType);
+			ImGui::TreePop();
+		}
+	}
 	ImGui::Separator();
 	ImGui::Image((void *)(intptr_t)(target->getOglId()), ImVec2(target->getWidth() * tex_scale, target->getHeight() * tex_scale), ImVec2(0, 0), ImVec2(1, 1), ImVec4(1.0f, 1.0f, 1.0f, 1.0f), ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
 
@@ -488,6 +272,7 @@ void gui_MapData()
 	}
 
 	ImGui::Text("All Flags: 0x%04X", g_flagsSeen);
+	ImGui::Text("Max Path: 0x%04X", g_maxTexPathLen);
 	
 	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 	if (ImGui::TreeNode(mapname.c_str()))
@@ -536,7 +321,7 @@ void ParseVertex(PMO_MESH_HEADER *meshHeader, uint8 *vertexStart, uint8 *jointIn
 		//rapi->rpgVertBoneIndexUB(jointIndices, meshHeader->dataFlags.jointCnt + 1);
 		//rapi->rpgVertBoneWeightUB(jointWeights, meshHeader->dataFlags.jointCnt + 1);
 
-		vertexData += meshHeader->dataFlags.jointCnt + 1;
+		vertexData += meshHeader->dataFlags.skinning + 1;
 	}
 
 	float tempData[4] = { 0 };
@@ -583,9 +368,9 @@ void ParseVertex(PMO_MESH_HEADER *meshHeader, uint8 *vertexStart, uint8 *jointIn
 		break;
 	}
 
-	switch (meshHeader->dataFlags.unknown0)
+	switch (meshHeader->dataFlags.color)
 	{
-	case 1:
+	case 7:
 		vertexData += ((0x4 - ((vertexData - vertexStart) & 0x3)) & 0x3);
 		{
 			float color[4] = { (float)vertexData[0] / 128.0f, (float)vertexData[1] / 128.0f, (float)vertexData[2] / 128.0f, (float)vertexData[3] / 255.0f };
@@ -594,11 +379,11 @@ void ParseVertex(PMO_MESH_HEADER *meshHeader, uint8 *vertexStart, uint8 *jointIn
 		}
 		vertexData += 4;
 		break;
-	case 2:
+	/*case 2:
 		//rapi->rpgVertColor3ub(vertexData);
 		builder.Color3ub(vertexData);
 		vertexData += 3;
-		break;
+		break;*/
 	default:
 	{
 		if (meshHeader->dataFlags.diffuse)
@@ -613,7 +398,7 @@ void ParseVertex(PMO_MESH_HEADER *meshHeader, uint8 *vertexStart, uint8 *jointIn
 		}
 		else
 		{
-			std::cout << "unknown dataFlags.unknown0 value " << meshHeader->dataFlags.unknown0 << std::endl;
+			std::cout << "unknown dataFlags.color value " << meshHeader->dataFlags.color << std::endl;
 			// set a default white diffuse color to avoid zeroing
 			uint8 color[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
 			//rapi->rpgVertColor4ub(color);
@@ -692,7 +477,7 @@ void LoadSectionGroup(PMO_HEADER *pmo_header, PMO_MESH_HEADER *mesh_header, int 
 			stripLengths = (uint16*)vertexStart;
 			vertexStart += (stripCount << 1);
 		}
-		else if (mesh_header->dataFlags.dataType == 4)
+		else if (mesh_header->dataFlags.primative == 4)
 		{
 			// simplified access to a single tri-strip...
 			stripCount = 1;
@@ -739,7 +524,7 @@ void LoadSectionGroup(PMO_HEADER *pmo_header, PMO_MESH_HEADER *mesh_header, int 
 					ParseVertex(mesh_header, vertexStart, jointIndices, pmo_header->modelScale, builder, diffuseColor);
 				}
 				//rapi->rpgEnd();
-				builder.EndSection();
+				builder.EndSection(mesh_header);
 			}
 		}
 		else
@@ -756,7 +541,7 @@ void LoadSectionGroup(PMO_HEADER *pmo_header, PMO_MESH_HEADER *mesh_header, int 
 				ParseVertex(mesh_header, vertexStart, jointIndices, pmo_header->modelScale, builder, diffuseColor);
 			}
 			//rapi->rpgEnd();
-			builder.EndSection();
+			builder.EndSection(mesh_header);
 		}
 
 		mesh_header = (PMO_MESH_HEADER*)(vertexStart + ((0x4 - (((char *)vertexStart - (char *)pmo_header) & 0x3)) & 0x3));
@@ -836,6 +621,7 @@ void LoadMapTextures()
 		{
 			std::cout << "WARN: texture " << tex_entry.first << " contains more than one image. Only the first will be loaded!" << std::endl;
 		}
+		if (tex_entry.first.length() > g_maxTexPathLen) g_maxTexPathLen = tex_entry.first.length();
 		TM2_PICTURE_HEADER *picture_header = (TM2_PICTURE_HEADER *)(tex_entry.second + 1); // yes, this works.
 
 		// The following is lifted almost directly from revel8n's BBS neosis plugin
@@ -965,7 +751,7 @@ void LoadMapTextures()
 		}
 		// end of revel8n code.
 
-		Texture *actualTexture = new Texture(psWidth, psHeight, tempImage, PF_RGBA32);
+		Texture *actualTexture = new Texture(psWidth, psHeight, tempImage, PF_RGBA32, tex_entry.second);
 		render_textures.emplace(tex_entry.first, actualTexture);
 		free(tempImage);
 	}

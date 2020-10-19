@@ -266,8 +266,10 @@ void Render_StartFrame(RenderContext& context)
 	context.stat_objs_drawn = 0;
 	context.stat_tris_drawn = 0;
 
-	context.highlight_shader->use();
-	context.highlight_shader->setVec4("color", context.debug_highlight_color);
+	//context.highlight_shader->use();
+	//context.highlight_shader->setVec4("color", context.debug_highlight_color);
+	std::shared_ptr<Shader> highlightShader = context.shaderLibrary->GetShader(context.highlight_shader);
+	highlightShader->setVec4("color", context.debug_highlight_color);
 }
 
 bool gui_show_map_data = false;
@@ -488,20 +490,29 @@ int main(int argc, char **argv)
 	globalRenderContext.debug_highlight_color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
 	globalRenderContext.debug_peel = false;
 	
+	std::vector<ShaderDef> shaders =
+	{
+		{
+			"unlit_vcol_tex",
+			fileManager.GetShaderPath("unlit_vcol_tex.vert.glsl"),
+			fileManager.GetShaderPath("unlit_vcol_tex.frag.glsl")
+		},
+		{
+			"constant",
+			fileManager.GetShaderPath("constant.vert.glsl"),
+			fileManager.GetShaderPath("constant.frag.glsl")
+		},
+		{
+			"unlit_vcol",
+			fileManager.GetShaderPath("unlit_vcol.vert.glsl"),
+			fileManager.GetShaderPath("unlit_vcol.frag.glsl")
+		}
+	};
 
-	std::string frag, vert;
-
-	vert = fileManager.GetShaderPath("unlit_vcol_tex.vert.glsl");
-	frag = fileManager.GetShaderPath("unlit_vcol_tex.frag.glsl");
-	globalRenderContext.default_shader = new Shader(vert.c_str(), frag.c_str());
-
-	vert = fileManager.GetShaderPath("constant.vert.glsl");
-	frag = fileManager.GetShaderPath("constant.frag.glsl");
-	globalRenderContext.highlight_shader = new Shader(vert.c_str(), frag.c_str());
-
-	vert = fileManager.GetShaderPath("unlit_vcol.vert.glsl");
-	frag = fileManager.GetShaderPath("unlit_vcol.frag.glsl");
-	globalRenderContext.textureless_shader = new Shader(vert.c_str(), frag.c_str());
+	globalRenderContext.shaderLibrary = std::make_shared<ShaderLibrary>(shaders);
+	globalRenderContext.default_shader = "unlit_vcol_tex";
+	globalRenderContext.highlight_shader = "constant";
+	globalRenderContext.textureless_shader = "unlit_vcol";
 
 	if (!fileManager.OpenFileWindow(loadPath))
 	{

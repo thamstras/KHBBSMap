@@ -125,6 +125,65 @@ struct PMO_SKEL_HEADER
 	uint16 unknown0x0E; // skinning start index
 };
 
+struct PMO_VERTEX_FLAGS
+{
+	uint32 texCoord : 2;		// Texture Coordinate Format
+								//		0 NONE
+								//		1 8-bit fixed
+								//		2 16-bit fixed
+								//		3 32-bit float
+
+	uint32 color : 3;			// Color Format
+								//		0 NONE
+								//		4 16-bit BGR-5650
+								//		5 16-bit ABGR-5551
+								//		6 16-bit ABGR-4444
+								//		7 32-bit ABGR-8888
+
+	uint32 normal : 2;			// Normal Format	UNUSED IN BBS
+
+	uint32 position : 2;		// Position Format
+								//		0 NONE
+								//		1 8-bit fixed
+								//		2 16-bit fixed
+								//		3 32-bit float
+
+	uint32 weights : 2;			// Weight Format
+								//		0 NONE
+								//		1 8-bit fixed
+								//		2 16-bit fixed
+								//		3 32-bit float
+
+	uint32 index : 2;			// Index Format		UNUSED IN BBS
+
+	uint32 unused_b13 : 1;
+
+	uint32 skinning : 3;		// Number of skinning weights
+								//		1 to 8. (ie: actual value is this+1)
+
+	uint32 unused_b17 : 1;
+
+	uint32 morphing : 3;		// Number of morphing weights	UNUSED IN BBS
+
+	uint32 unused_b21_22 : 2;
+
+	uint32 skipTransform : 1;	// Skip Transform Pipeline	UNUSED IN BBS?
+
+	uint32 diffuse : 1;			// Diffuse color follows header
+
+	uint32 unk : 3;				// Possibly unused
+
+	uint32 primative : 4;		// Primative Type
+								//		0 Points
+								//		1 Lines
+								//		2 Line Strip
+								//		3 Triangles
+								//		4 Triangle Strip
+								//		5 Triangle Fan
+								//		6 Sprites (quads)
+
+};
+
 struct PMO_MESH_HEADER
 {
 	// 0x00
@@ -132,25 +191,15 @@ struct PMO_MESH_HEADER
 	uint8  textureID;
 	uint8  vertexSize;
 
-	struct
-	{
-		uint32 texCoord : 2; // texture coordinate format: 0 - none, 1 - uint8, 2 - uint16, 3 - float
-		uint32 unknown9 : 2; //
-		uint32 unknown0 : 3; // unsure of bit size, but when this is not zero, diffuse color is present in vertex data
-		uint32 position : 2; // position format: 0 - none, 2 - int16, 3 - float
-		uint32 skinning : 1; // only seems to be set when there are joint weights present?
-		uint32 unknown1 : 4;
-		uint32 jointCnt : 4; // maximum joint index used? (index count = joint count + 1 - or just use (jointCnt + skinning)
-		uint32 unknown2 : 6;
-		uint32 diffuse : 1; // seems to only be set when a diffuse color is present in header
-		uint32 unknown3 : 3;
-		uint32 dataType : 4; // 0x30 - tri-list, 0x40 - tri-strip - ?
-	} dataFlags;
+	PMO_VERTEX_FLAGS dataFlags;
 
 	uint8  unknown0x08;
 	uint8  triStripCount;
 	uint8  unknown0x0A[2];
 };
+
+constexpr uint32 PMO_MAGIC_I = ('P' << 24) | ('M' << 16) | ('O' << 8) | ('\0' << 0);
+constexpr char PMO_MAGIC_C[4] = { 'P', 'M', 'O', '\0' };
 
 struct PMO_HEADER
 {

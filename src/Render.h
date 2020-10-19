@@ -1,6 +1,7 @@
 #pragma once
 #include "Common.h"
 #include "Shader.h"
+#include "ShaderLibrary.h"
 
 struct RenderContext
 {
@@ -11,6 +12,8 @@ struct RenderContext
 	bool render_no_cull;
 	bool render_no_blend;
 	bool render_no_texture;
+
+	bool render_lighting_enabled;
 
 	glm::mat4 render_viewMatrix;
 	glm::mat4 render_projectionMatrix;
@@ -31,9 +34,14 @@ struct RenderContext
 	bool debug_peel;
 	glm::vec4 debug_highlight_color;
 
-	Shader *default_shader;
+	/*Shader *default_shader;
 	Shader *highlight_shader;
-	Shader *textureless_shader;
+	Shader *textureless_shader;*/
+	std::string default_shader;
+	std::string highlight_shader;
+	std::string textureless_shader;
+
+	std::shared_ptr<ShaderLibrary> shaderLibrary;
 };
 
 struct VertexDefinition
@@ -45,4 +53,14 @@ struct VertexDefinition
 	size_t color_components;	// 0, 3 or 4
 								// If there are 4 color components the last (alpha) is always unsigned.
 	GLenum texture_type;		// GL_NONE, GL_UNSIGNED_BYTE, GL_UNSIGNED_SHORT or GL_FLOAT
+};
+
+class IRenderable
+{
+public:
+	virtual ~IRenderable() {};
+
+	virtual bool Create() = 0;
+	virtual void Render() = 0;
+	virtual void Destroy() = 0;
 };

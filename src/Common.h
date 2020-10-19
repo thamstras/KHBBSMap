@@ -15,3 +15,5 @@
 #include "imgui.h"
 
 #include "Settings.h"
+
+#include "BTypes.h"

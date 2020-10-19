@@ -12,7 +12,7 @@ size_t PixelFormatSize(PixelFormat pf);
 class Texture
 {
 public:
-	Texture(uint32_t width, uint32_t height, uint8_t *data, PixelFormat format);
+	Texture(uint32_t width, uint32_t height, uint8_t *data, PixelFormat format, void* userPtr = nullptr);
 	~Texture();
 
 	void ogl_loadIfNeeded();
@@ -24,6 +24,8 @@ public:
 	GLuint getOglId() const;
 
 	bool isLoaded() const;
+
+	void* userPtr;
 
 private:
 	unsigned int width, height;

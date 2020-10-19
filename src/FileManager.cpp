@@ -127,25 +127,13 @@ bool FileManager::OpenFileWindow(std::string& out_filePath)
 	ZeroMemory(&ofn, sizeof(ofn));
 
 	ofn.lStructSize = sizeof(OPENFILENAME);
-	ofn.hwndOwner = NULL;
-	ofn.hInstance = NULL;
 	ofn.lpstrFilter = TEXT("All Files\0*.*\0\0");
-	ofn.lpstrCustomFilter = NULL;
-	ofn.nMaxCustFilter = 0;
-	ofn.nFilterIndex = 0;
 	ofn.lpstrFile = filename;
 	ofn.nMaxFile = MAX_PATH;
-	ofn.lpstrFileTitle = NULL;
-	ofn.nMaxFileTitle = 0;
 	ofn.lpstrInitialDir = resourcesPath.c_str();
 	ofn.lpstrTitle = TEXT("Select a File");
 	ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
-	ofn.nFileOffset = 0;
-	ofn.nFileExtension = 0;
 	ofn.lpstrDefExt = TEXT("pmp");
-	ofn.lCustData = NULL;
-	ofn.lpfnHook = NULL;
-	ofn.lpTemplateName = NULL;
 
 	if (GetOpenFileName(&ofn))
 	{
@@ -183,4 +171,11 @@ bool FileManager::OpenFileWindow(std::string& out_filePath)
 		return false;
 	}
 
+}
+
+bool FileManager::GetExportFolder(std::string& out_path)
+{
+	fs::path orignalPath = fs::current_path();
+
+	return false;
 }
