@@ -20,6 +20,7 @@ public:
 
 	uint32_t getWidth() const;
 	uint32_t getHeight() const;
+	const uint8_t* getPixels() const;
 
 	GLuint getOglId() const;
 

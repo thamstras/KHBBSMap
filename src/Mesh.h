@@ -44,6 +44,8 @@ private:
 	bool twoSided;
 
 	PMO_MESH_HEADER* raw;
+
+	friend class AssimpExporter;
 };
 
 struct MeshFlags
@@ -65,6 +67,8 @@ public:
 	void SetPosRotScale(glm::vec3 pos, glm::vec3 rot, glm::vec3 scale);
 	void SetFlags(MeshFlags flags);
 
+	void StoreTextureList(std::vector<std::string> textures);
+
 	unsigned int GetSectionCount();
 	bool GetIsSkybox();
 	void gui_ListSections();
@@ -74,6 +78,10 @@ private:
 	glm::vec3 scale;
 	std::vector<MeshSection *> sections;
 	MeshFlags flags;
+
+	std::vector<std::string> texture_list;	// purly for exporter...
+
+	friend class AssimpExporter;
 };
 
 class MeshBuilder

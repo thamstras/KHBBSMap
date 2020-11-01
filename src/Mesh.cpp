@@ -369,6 +369,11 @@ void Mesh::SetFlags(MeshFlags flags)
 	this->flags = flags;
 }
 
+void Mesh::StoreTextureList(std::vector<std::string> textures)
+{
+	this->texture_list = textures;
+}
+
 unsigned int Mesh::GetSectionCount()
 {
 	return sections.size();

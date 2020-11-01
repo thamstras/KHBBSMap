@@ -72,6 +72,11 @@ uint32_t Texture::getHeight() const
 	return height;
 }
 
+const uint8_t* Texture::getPixels() const
+{
+	return (data);
+}
+
 GLuint Texture::getOglId() const
 {
 	return ogl_texid;

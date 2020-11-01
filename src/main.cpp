@@ -287,7 +287,48 @@ void gui_DrawOpenFileModal()
 	}
 }
 
-void gui_DrawSystemGui(FileManager fileManager)
+bool export_option = false;
+
+bool export_skybox_normal = true;
+bool export_skybox_scaled = false;
+
+void gui_DrawExportOptions(FileManager& filemanager)
+{
+	if (ImGui::BeginPopupModal("ExportModal"))
+	{
+		ImGui::Text("Export Options");
+
+		ImGui::Separator();
+		
+		ImGui::Text("Skybox handling");
+		bool n_normal = ImGui::RadioButton("Normal", export_skybox_normal);
+		ImGui::SameLine();
+		bool n_scaled = ImGui::RadioButton("Scaled", export_skybox_scaled);
+		if (n_normal) { export_skybox_normal = true; export_skybox_scaled = false; }
+		else if (n_scaled) { export_skybox_normal = false; export_skybox_scaled = true; }
+
+		ImGui::Separator();
+
+		if (ImGui::Button("Cancel"))
+		{
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Export"))
+		{
+			ImGui::CloseCurrentPopup();
+			std::string fs;
+			if (filemanager.GetExportFolder(fs))
+			{
+				ExportMap(fs);
+			}
+		}
+
+		ImGui::EndPopup();
+	}
+}
+
+void gui_DrawSystemGui(FileManager& fileManager)
 {
 	// 'System' info window
 	ImGui::Begin("System");
@@ -321,6 +362,7 @@ void gui_DrawSystemGui(FileManager fileManager)
 	// System Gui (toolbar etc.)
 	bool shouldOpenFile = false;
 	bool shouldCloseFile = false;
+	bool shouldExport = false;
 	bool shouldExit = false;
 
 	ImGui::BeginMainMenuBar();
@@ -329,11 +371,16 @@ void gui_DrawSystemGui(FileManager fileManager)
 		if (ImGui::MenuItem("Open...")) shouldOpenFile = true;
 		//if (ImGui::MenuItem("Close")) shouldCloseFile = true;
 		ImGui::Separator();
+		if (ImGui::MenuItem("Export...")) shouldExport = true;
+		ImGui::Separator();
 		if (ImGui::MenuItem("Exit")) shouldExit = true;
 		ImGui::EndMenu();
 	}
 
+	ImGui::EndMainMenuBar();
+
 	//if (shouldOpenFile) ImGui::OpenPopup("OpenFileModal");
+	if (shouldExport) ImGui::OpenPopup("ExportModal");
 
 	if (shouldExit) glfwSetWindowShouldClose(g_window.window, true);
 
@@ -342,11 +389,10 @@ void gui_DrawSystemGui(FileManager fileManager)
 		g_loadNewMap = true;
 	}
 
-	ImGui::EndMainMenuBar();
 
 	// Modals
 	//gui_DrawOpenFileModal();
-	
+	gui_DrawExportOptions(fileManager);
 }
 
 void gui_DrawRenderGui(RenderContext& context)
@@ -442,7 +488,7 @@ void gui_endSplash()
 	// TODO: delete texture
 }
 
-void LoadNewMap(FileManager fileManager, RenderContext renderContext)
+void LoadNewMap(FileManager& fileManager, RenderContext renderContext)
 {
 	std::string newFile;
 	if (fileManager.OpenFileWindow(newFile))

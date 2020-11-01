@@ -177,5 +177,10 @@ bool FileManager::GetExportFolder(std::string& out_path)
 {
 	fs::path orignalPath = fs::current_path();
 
-	return false;
+	fs::path outPath = resourcesPath;
+	outPath.append("export");
+
+	out_path = outPath.string();
+
+	return true;
 }

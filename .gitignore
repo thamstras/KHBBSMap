@@ -5,3 +5,4 @@ imgui-master/
 release/
 *.pmp
 imgui.ini
+.vs/

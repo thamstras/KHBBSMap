@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include "Mesh.h"
 #include <algorithm>
+#include "MapLoad.h"
+#include "AssimpInterface.h"
 
 // FLAGS NOT FOUND:
 //	Culling Order,
@@ -608,6 +610,7 @@ void LoadMapObjects()
 		//flags.isDecal = (bool)(obj_entry.first->flags & (1 << 5));
 		model->SetFlags(flags);
 		g_flagsSeen |= obj_entry.first->flags;
+		model->StoreTextureList(tex_list);
 		render_meshes.push_back(model);
 	}
 }
@@ -879,4 +882,19 @@ void UnloadBBSMap()
 	header = nullptr;
 	free(g_fbuf);
 	g_fbuf = nullptr;
+}
+
+void ExportMap(std::string folder)
+{
+	AssimpExporter exp;
+	exp.BeginExport();
+	for (auto& tex : render_textures)
+	{
+		exp.AddTexture(tex.first, tex.second);
+	}
+	for (auto& msh : render_meshes)
+	{
+		exp.AddMesh(msh);
+	}
+	exp.EndExport(folder, mapname);
 }
