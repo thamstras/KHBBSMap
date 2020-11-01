@@ -45,17 +45,17 @@ aiScene* aiSceneWrapper::Finish()
 	scene->mNumMeshes = mMeshes.size();
 	scene->mNumMaterials = mMaterials.size();
 
-	aiMesh** meshArr = (aiMesh**)malloc(scene->mNumMeshes * sizeof(aiMesh*));
-	memcpy(meshArr, mMeshes.data(), scene->mNumMeshes * sizeof(aiMesh*));
+	aiMesh** meshArr = new aiMesh * [scene->mNumMeshes];
+	for (int i = 0; i < scene->mNumMeshes; i++) { meshArr[i] = mMeshes[i]; }
 	scene->mMeshes = meshArr;
 
-	aiMaterial** matArr = (aiMaterial**)malloc(scene->mNumMaterials * sizeof(aiMaterial*));
-	memcpy(matArr, mMaterials.data(), scene->mNumMaterials * sizeof(aiMaterial*));
+	aiMaterial** matArr = new aiMaterial * [scene->mNumMaterials];
+	for (int i = 0; i < scene->mNumMaterials; i++) { matArr[i] = mMaterials[i]; }
 	scene->mMaterials = matArr;
 
+	// These belong to the actual aiScene now.
 	mMeshes.clear();
 	mMaterials.clear();
-	// TODO: If there's a node in the list that isn't connected, this will leak.
 	mAllNodes.clear();
 
 	return scene;
@@ -69,7 +69,11 @@ aiMeshWrapper::aiMeshWrapper()
 
 aiMeshWrapper::~aiMeshWrapper()
 {
-
+	// None of the vectors hold pointers so everything will clean up nicely.
+	mVertices.clear();
+	mColors.clear();
+	mFaces.clear();
+	mTextureCoords.clear();
 }
 
 aiMesh* aiMeshWrapper::Finish()
@@ -79,24 +83,19 @@ aiMesh* aiMeshWrapper::Finish()
 	mesh->mMaterialIndex = mMaterialIndex;
 
 	mesh->mNumVertices = mVertices.size();
-	mesh->mVertices = (aiVector3D*)malloc(mesh->mNumVertices * sizeof(aiVector3D));
-	memcpy(mesh->mVertices, mVertices.data(), mesh->mNumVertices * sizeof(aiVector3D));
+	mesh->mVertices = new aiVector3D[mesh->mNumVertices];
+	for (int i = 0; i < mesh->mNumVertices; i++) { mesh->mVertices[i] = mVertices[i]; }
 
 	mesh->mNumFaces = mFaces.size();
-	//mesh->mFaces = (aiFace*)malloc(mesh->mNumFaces * sizeof(aiFace));
 	mesh->mFaces = new aiFace[mesh->mNumFaces];
-	//memcpy(mesh->mFaces, mFaces.data(), mesh->mNumFaces * sizeof(aiFace));
-	for (int i = 0; i < mesh->mNumFaces; i++)
-	{
-		mesh->mFaces[i] = mFaces[i];
-	}
+	for (int i = 0; i < mesh->mNumFaces; i++) { mesh->mFaces[i] = mFaces[i]; }
 
-	mesh->mColors[0] = (aiColor4D*)malloc(mesh->mNumVertices * sizeof(aiColor4D));
-	memcpy(mesh->mColors[0], mColors.data(), mesh->mNumVertices * sizeof(aiColor4D));
+	mesh->mColors[0] = new aiColor4D[mesh->mNumVertices];
+	for (int i = 0; i < mesh->mNumVertices; i++) { mesh->mColors[0][i] = mColors[i]; }
 
 	mesh->mNumUVComponents[0] = 2;
-	mesh->mTextureCoords[0] = (aiVector3D*)malloc(mesh->mNumVertices * sizeof(aiVector3D));
-	memcpy(mesh->mTextureCoords[0], mTextureCoords.data(), mesh->mNumVertices * sizeof(aiVector3D));
+	mesh->mTextureCoords[0] = new aiVector3D[mesh->mNumVertices];
+	for (int i = 0; i < mesh->mNumVertices; i++) { mesh->mTextureCoords[0][i] = mTextureCoords[i]; }
 
 	return mesh;
 }
@@ -114,6 +113,15 @@ AssimpExporter::AssimpExporter()
 	AddTexture("dummyTexture", dummyTexture);
 }
 
+AssimpExporter::~AssimpExporter()
+{
+	if (scene)
+	{
+		delete scene;
+		scene = nullptr;
+	}
+}
+
 void AssimpExporter::BeginExport()
 {
 	scene = new aiSceneWrapper();
@@ -125,7 +133,6 @@ void AssimpExporter::BeginExport()
 
 void AssimpExporter::AddTexture(std::string name, Texture* texture)
 {
-	//if (std::find(textureMap.begin(), textureMap.end(), name) != textureMap.end()) return;
 	if (textureMap.find(name) != textureMap.end()) return;
 	
 	int idx = textureList.size();
@@ -265,10 +272,8 @@ void AssimpExporter::EndExport(std::string folderPath, std::string mapname)
 		return;
 	}
 
-	//for (auto& kvp : textureMap)
 	for (int i = 0; i < textureList.size(); i++)
 	{
-		//std::string name = kvp.first;
 		std::string name = textureUnmap.at(i);
 
 		if (name == "dummyTexture")
@@ -314,19 +319,10 @@ void AssimpExporter::EndExport(std::string folderPath, std::string mapname)
 	outFile.replace_extension(".fbx");
 
 	Assimp::Exporter exp = Assimp::Exporter();
-	int count = exp.GetExportFormatCount();
-	/*const char* pickedFormat = nullptr;
-	for (int f = 0; f < count; f++)
-	{
-		auto format = exp.GetExportFormatDescription(f);
-		if (format->fileExtension == "fbx")
-		{
-			pickedFormat = format->id;
-			break;
-		}
-	}*/
 	if (AI_SUCCESS != exp.Export(finalScene, "fbx", outFile.string(), aiPostProcessSteps::aiProcess_FlipUVs))
 	{
 		std::cerr << "Failed to export fbx file!" << std::endl;
 	}
+
+	delete finalScene;
 }

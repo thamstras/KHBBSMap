@@ -300,12 +300,16 @@ void gui_DrawExportOptions(FileManager& filemanager)
 
 		ImGui::Separator();
 		
-		ImGui::Text("Skybox handling");
+		ImGui::Text("Skybox handling (NYI)");
 		bool n_normal = ImGui::RadioButton("Normal", export_skybox_normal);
 		ImGui::SameLine();
 		bool n_scaled = ImGui::RadioButton("Scaled", export_skybox_scaled);
 		if (n_normal) { export_skybox_normal = true; export_skybox_scaled = false; }
 		else if (n_scaled) { export_skybox_normal = false; export_skybox_scaled = true; }
+
+		ImGui::Separator();
+
+		ImGui::Text("Will export to .\\resources\\export");
 
 		ImGui::Separator();
 

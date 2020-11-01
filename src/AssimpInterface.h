@@ -40,6 +40,7 @@ class AssimpExporter
 {
 public:
 	AssimpExporter();
+	~AssimpExporter();
 
 	void BeginExport();
 
