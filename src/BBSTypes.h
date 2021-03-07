@@ -24,7 +24,9 @@ enum GsPSM
 
 enum IMG_TYPE
 {
-	IT_RGBA = 3,
+	IT_A1BGR5 = 1,
+	IT_XBGR8 = 2,
+	IT_ABGR8 = 3,
 	IT_CLUT4 = 4,
 	IT_CLUT8 = 5,
 };

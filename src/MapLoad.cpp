@@ -643,6 +643,8 @@ void LoadMapTextures()
 		uint8 *tempImage = (uint8 *)malloc(psWidth * psHeight * 4);
 		uint8 *dstPixel = tempImage;
 
+		if (psWidth == 0 || psHeight == 0 || width == 0 || height == 0) continue;
+
 		uint32 _x = 0;
 		uint32 _y = 0;
 		for (_y = 0; _y < height; ++_y)
@@ -651,17 +653,40 @@ void LoadMapTextures()
 			{
 				uint32 pixelIndex0 = *imageData;
 				uint32 pixelIndex1 = pixelIndex0;
+				bool needClut = false;
+				uint16 pixel = 0;
 
 				switch (picture_header->imageType)
 				{
-				case IT_RGBA:
+				case IT_A1BGR5:
+					pixel = *((uint16*)(imageData));
+					dstPixel[0] = (pixel & 0x1F) * (1.0 / 31.0 * 255.0);
+					dstPixel[1] = ((pixel >> 5) & 0x1F) * (1.0 / 31.0 * 255.0);
+					dstPixel[2] = ((pixel >> 10) & 0x1F) * (1.0 / 31.0 * 255.0);
+					dstPixel[3] = (pixel & 0x8000) ? (0xFF) : (0);
+					imageData += 1;
+					break;
+				case IT_XBGR8:
+					dstPixel[0] = imageData[0];
+					dstPixel[1] = imageData[1];
+					dstPixel[2] = imageData[2];
+					imageData += 2;
+					break;
+				case IT_ABGR8:
+					dstPixel[0] = imageData[0];
+					dstPixel[1] = imageData[1];
+					dstPixel[2] = imageData[2];
+					dstPixel[3] = imageData[3];
+					imageData += 3;
 					break;
 				case IT_CLUT4:
+					needClut = true;
 					pixelIndex0 &= 0x0F;
 					pixelIndex1 = (pixelIndex1 >> 4) & 0x0F;
 					break;
 				case IT_CLUT8:
 				{
+					needClut = true;
 					if ((pixelIndex0 & 31) >= 8)
 					{
 						if ((pixelIndex0 & 31) < 16)
@@ -676,19 +701,16 @@ void LoadMapTextures()
 				}
 				break;
 				default:
+					std::cerr << "UNKNOWN IMAGE TYPE " << picture_header->imageType << std::endl;
 					return;
 					break;
 				}
 
-				uint16 pixel = 0;
+				if (!needClut) continue;
+				
 				switch (picture_header->clutType)
 				{
 				case CT_NONE:
-					dstPixel[0] = imageData[0];
-					dstPixel[1] = imageData[1];
-					dstPixel[2] = imageData[2];
-					dstPixel[3] = imageData[3];
-					imageData += 3;
 					break;
 				case CT_A1BGR5:
 					pixelIndex0 <<= 1;
@@ -713,6 +735,7 @@ void LoadMapTextures()
 					dstPixel[3] = clutData[pixelIndex0 + 3];
 					break;
 				default:
+					std::cerr << "UNKNOWN CLUT TYPE " << picture_header->clutType << std::endl;
 					return;
 					break;
 				}
@@ -746,6 +769,8 @@ void LoadMapTextures()
 						dstPixel[3] = clutData[pixelIndex1 + 3];
 						break;
 					default:
+						std::cerr << "UNKNOWN CLUT TYPE " << picture_header->clutType << std::endl;
+						return;
 						break;
 					}
 				}
