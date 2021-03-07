@@ -20,12 +20,13 @@ workspace "KHBBSMap"
         system "Windows" 
         architecture "x32"
 		vpaths {
-			["Source"] = { "**.h", "**.c", "**.hpp", "**.cpp"},
-			["Shaders"] = { "**.glsl", "**.vert", "**.frag" },
+			["Source/*"] = { "src/**.h", "src/**.c", "src/**.hpp", "src/**.cpp"},
+            ["Shaders"] = { "**.glsl", "**.vert", "**.frag" },
+            ["glad/*"] = { "glad"},
 		}
 		files { "src/**", "resources/shaders/**" }
         flags {"NoPCH"}  -- TODO: Check to see if more flags are needed.
-        targetdir "bin"
+        --targetdir "bin"
         --debugdir "./" -- TODO: This doesn't give the right results and the .user file overrides it once generated.
                         --       Also, now rendered irrelevent by the new FileManager search functionality.
 		
@@ -33,10 +34,12 @@ workspace "KHBBSMap"
             defines {"DEBUG"} 
             symbols "on" 
             optimize "off" 
+            targetdir "bin/debug"
 
         filter "configurations:Release"
             defines {"NDEBUG"} 
             optimize "on"
+            targetdir "bin/release"
 		filter({})
 		
 		-- GLM

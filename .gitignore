@@ -6,3 +6,4 @@ release/
 *.pmp
 imgui.ini
 .vs/
+resources/export/
