@@ -232,11 +232,15 @@ bool init(FileManager& fileManager)
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
-	ImGui::StyleColorsDark();
+	//ImGui::StyleColorsDark();
+	ImGui::StyleColorsLight();
+	ImGui::GetStyle().ColorButtonPosition = ImGuiDir_Left;
+	ImGui::GetStyle().FrameBorderSize = 1.0f;
 	ImGui_ImplGlfw_InitForOpenGL(g_window.window, true);
 	ImGui_ImplOpenGL3_Init();
 	
-	std::string fontPath = fileManager.GetFontPath("Roboto-Medium.ttf");
+	//std::string fontPath = fileManager.GetFontPath("Roboto-Medium.ttf");
+	std::string fontPath = fileManager.GetFontPath("Aldrich-Regular.ttf");
 	ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 13.0f);
 	assert(font != nullptr);
 
