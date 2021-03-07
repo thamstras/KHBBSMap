@@ -269,7 +269,7 @@ void Render_StartFrame(RenderContext& context)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	context.render_viewMatrix = g_camera.GetViewMatrix();
-	context.render_projectionMatrix = glm::perspective(glm::radians(g_camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
+	context.render_projectionMatrix = glm::perspective(glm::radians(g_camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, context.render_nearClip, context.render_farClip);
 	context.render_skyViewMatrix = glm::mat4(glm::mat3(context.render_viewMatrix));
 
 	context.stat_draw_calls = 0;
@@ -281,6 +281,22 @@ void Render_StartFrame(RenderContext& context)
 	std::shared_ptr<Shader> highlightShader = context.shaderLibrary->GetShader(context.highlight_shader);
 	highlightShader->use();
 	highlightShader->setVec4("color", context.debug_highlight_color);
+
+	std::shared_ptr<Shader> standardShader = context.shaderLibrary->GetShader(context.default_shader);
+	standardShader->use();
+	standardShader->setVec4("fog_color", context.fogColor);
+	if (context.render_no_fog)
+	{
+		standardShader->setFloat("fog_near", context.render_farClip);
+		standardShader->setFloat("fog_far", context.render_farClip);
+	}
+	else
+	{
+		standardShader->setFloat("fog_near", context.fogNear);
+		standardShader->setFloat("fog_far", context.fogFar);
+	}
+
+	glClearColor(context.clearColor.r, context.clearColor.g, context.clearColor.b, context.clearColor.a);
 }
 
 bool gui_show_map_data = false;
@@ -467,6 +483,76 @@ void gui_DrawDebugGui(RenderContext& context)
 	//context.debug_active = false;
 }
 
+void gui_DrawEnvGui(FileManager& fileManager, RenderContext& context)
+{
+	float viewAngle = glm::radians(g_camera.Zoom);
+	ImGui::Begin("Environment");
+	
+	ImGui::ColorEdit4("Fog Color", glm::value_ptr(context.fogColor));
+	
+	ImGui::SetNextItemWidth(0.4f * ImGui::CalcItemWidth());
+	ImGui::InputFloat("Fog Near", &context.fogNear);
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(0.4f * ImGui::CalcItemWidth());
+	ImGui::InputFloat("Fog Far", &context.fogFar);
+	
+	ImGui::SetNextItemWidth(0.4f * ImGui::CalcItemWidth());
+	ImGui::InputFloat("Near Clip", &context.render_nearClip);
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(0.4f * ImGui::CalcItemWidth());
+	ImGui::InputFloat("Far Clip", &context.render_farClip);
+	
+	ImGui::ColorEdit4("Clear Color", glm::value_ptr(context.clearColor));
+	
+	ImGui::SetNextItemWidth(0.4f * ImGui::CalcItemWidth());
+	if (ImGui::InputFloat("View Angle", &viewAngle))
+	{
+		g_camera.Zoom = glm::degrees(viewAngle);
+	}
+	
+	if (ImGui::Button("Load Env (PVD)"))
+	{
+		std::string path;
+		if (fileManager.OpenFileWindow(path))
+		{
+			// TODO: better.
+			std::FILE* file = std::fopen(path.c_str(), "rb");
+			char magic[4];
+			std::fread(magic, 1, 4, file);
+			if (memcmp(magic, "PVD\0", 4) != 0)
+			{
+				std::cerr << "Not a valid PVD file!" << std::endl;
+				return;
+			}
+			
+			// fog color
+			std::fseek(file, 0x10, SEEK_SET);
+			glm::u8vec4 colorIn;
+			std::fread((void*)(glm::value_ptr(colorIn)), sizeof(glm::u8), 4, file);
+			context.fogColor = glm::vec4((float)colorIn.r/255.0f, (float)colorIn.g/255.0f, (float)colorIn.b/255.0f, (float)colorIn.a/255.0f);
+			
+			std::fread((void*)(&context.fogNear), sizeof(float), 1, file);
+			std::fread((void*)(&context.fogFar), sizeof(float), 1, file);
+			std::fread((void*)(&context.render_nearClip), sizeof(float), 1, file);
+			std::fread((void*)(&context.render_farClip), sizeof(float), 1, file);
+
+			// clear color
+			std::fseek(file, 0x28, SEEK_SET);
+			std::fread((void*)(glm::value_ptr(colorIn)), sizeof(glm::u8), 4, file);
+			context.clearColor = glm::vec4((float)colorIn.r / 255.0f, (float)colorIn.g / 255.0f, (float)colorIn.b / 255.0f, (float)colorIn.a / 255.0f);
+
+			std::fseek(file, 0x30, SEEK_SET);
+			float viewIn;
+			std::fread((void*)(&viewIn), sizeof(float), 1, file);
+			g_camera.Zoom = glm::degrees(viewIn);
+
+			std::fclose(file);
+		}
+	}
+
+	ImGui::End();
+}
+
 void shutdown_gs()
 {
 	UnloadBBSMap();
@@ -542,6 +628,9 @@ int main(int argc, char **argv)
 	globalRenderContext.render_no_blend = false;
 	globalRenderContext.render_no_cull = true;
 	globalRenderContext.render_no_texture = false;
+
+	globalRenderContext.render_nearClip = 0.1f;
+	globalRenderContext.render_farClip = 1000.0f;
 	
 	globalRenderContext.debug_active = false;
 	globalRenderContext.debug_section = false;
@@ -576,6 +665,12 @@ int main(int argc, char **argv)
 	globalRenderContext.default_shader = "unlit_vcol_tex";
 	globalRenderContext.highlight_shader = "constant";
 	globalRenderContext.textureless_shader = "unlit_vcol";
+
+	globalRenderContext.render_no_fog = false;
+	globalRenderContext.fogColor = glm::vec4(1.0f);
+	globalRenderContext.fogNear = 1000.0f;
+	globalRenderContext.fogFar = 1000.0f;
+	globalRenderContext.clearColor = glm::vec4(0.2f, 0.3f, 0.3f, 1.0f);
 
 	if (!fileManager.OpenFileWindow(loadPath))
 	{
@@ -619,6 +714,7 @@ int main(int argc, char **argv)
 		gui_tex_view();
 
 		gui_DrawRenderGui(globalRenderContext);
+		gui_DrawEnvGui(fileManager, globalRenderContext);
 
 		//ImGui::ShowDemoWindow();
 

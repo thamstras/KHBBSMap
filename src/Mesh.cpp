@@ -2,6 +2,7 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/quaternion.hpp"
 
+using namespace std::string_literals;
 
 MeshBuilder::MeshBuilder()
 {
@@ -153,7 +154,6 @@ void MeshSection::Draw(glm::mat4& model, RenderContext& context, std::shared_ptr
 	//static const std::string uniform_model_name = "model";
 	//static const std::string uniform_view_name = "view";
 	//static const std::string uniform_projection_name = "projection";
-	static const std::string uniform_texture_name = "tex_diffuse";
 
 	//shader->use();
 	//shader->setMat4(uniform_model_name, model);
@@ -164,7 +164,7 @@ void MeshSection::Draw(glm::mat4& model, RenderContext& context, std::shared_ptr
 	GLuint texid = texture->getOglId();
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texid);
-	shader->setInt(uniform_texture_name, 0);
+	shader->setInt("tex_diffuse"s, 0);
 	if (twoSided) glDisable(GL_CULL_FACE);
 
 	glBindVertexArray(VAO);

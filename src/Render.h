@@ -20,6 +20,9 @@ struct RenderContext
 
 	glm::mat4 render_skyViewMatrix;
 
+	float render_nearClip;
+	float render_farClip;
+
 	unsigned int stat_objs_drawn;
 	unsigned int stat_draw_calls;
 	unsigned int stat_tris_drawn;
@@ -42,6 +45,12 @@ struct RenderContext
 	std::string textureless_shader;
 
 	std::shared_ptr<ShaderLibrary> shaderLibrary;
+
+	bool render_no_fog;
+	glm::vec4 fogColor;
+	float fogNear;
+	float fogFar;
+	glm::vec4 clearColor;
 };
 
 struct VertexDefinition

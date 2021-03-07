@@ -10,10 +10,12 @@ layout (location = 2) in vec2 tex;
 
 out vec4 vColor;
 out vec2 vTex;
+out float vDepth;
 
 void main()
 {
 	gl_Position = projection * view * model * position;
 	vColor = color;
 	vTex = tex;
+	vDepth = -(view * model * position).z;
 }
