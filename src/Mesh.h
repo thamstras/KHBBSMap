@@ -28,11 +28,12 @@ struct OmniVert
 class MeshSection
 {
 public:
-	MeshSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture, PMO_MESH_HEADER* raw);
+	MeshSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture, glm::vec2 uvScroll, int pass, PMO_MESH_HEADER* raw);
 	~MeshSection();
 
 	void Draw(glm::mat4& model, RenderContext& context, std::shared_ptr<Shader> shader);
 	void gui_PrintDetails();
+	int PassNumber();
 private:
 	unsigned int vert_count;
 	float *vert_data;
@@ -42,6 +43,9 @@ private:
 	GLenum draw_primative;
 	Texture *texture;
 	bool twoSided;
+	uint16 blend;
+	glm::vec2 uvScroll;
+	int pass;
 
 	PMO_MESH_HEADER* raw;
 
@@ -62,8 +66,8 @@ public:
 
 	int mesh_idx;
 
-	void AddSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture, PMO_MESH_HEADER* raw);
-	void Draw(RenderContext& context);
+	void AddSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture, glm::vec2 uvScroll, int pass, PMO_MESH_HEADER* raw);
+	void Draw(RenderContext& context, int pass);
 	void SetPosRotScale(glm::vec3 pos, glm::vec3 rot, glm::vec3 scale);
 	void SetFlags(MeshFlags flags);
 
@@ -89,7 +93,7 @@ class MeshBuilder
 public:
 	MeshBuilder();
 
-	void BeginSection(GLenum primative_type, Texture *texture);
+	void BeginSection(GLenum primative_type, Texture *texture, glm::vec2 uvScroll, int pass);
 	void EndSection(PMO_MESH_HEADER* raw);
 	
 	void TexUV2f(float *uv);
@@ -105,5 +109,7 @@ private:
 	std::vector<OmniVert> vert_list;
 	GLenum current_primative;
 	Texture *current_texture;
+	glm::vec2 current_uvScroll;
+	int current_pass;
 	Mesh *child;
 };

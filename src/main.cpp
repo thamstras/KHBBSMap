@@ -258,10 +258,10 @@ void Render_StartFrame(RenderContext& context)
 	else
 		glEnable(GL_CULL_FACE);
 
-	if (context.render_no_blend)
+	/*if (context.render_no_blend)
 		glDisable(GL_BLEND);
 	else
-		glEnable(GL_BLEND);
+		glEnable(GL_BLEND);*/
 
 	if (context.render_wireframe)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);

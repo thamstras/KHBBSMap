@@ -95,7 +95,10 @@ struct PMO_TEXTURE_HEADER
 	uint32 dataOffset;
 	char   resourceName[0x0C];
 	// 0x10
-	uint32 unknown0x10[4];
+	//uint32 unknown0x10[4];
+	float scrollX;
+	float scrollY;
+	uint32 padding[2];
 };
 
 struct PMO_JOINT
@@ -186,6 +189,32 @@ struct PMO_VERTEX_FLAGS
 
 };
 
+enum PMO_MESH_ATTR
+{
+	ATTR_BLEND_NONE = 0x0,
+	ATTR_NOMATERIAL = 0x1,
+	ATTR_GLARE = 0x2,
+	ATTR_BACK = 0x4,
+	ATTR_DIVIDE = 0x8,
+	ATTR_TEXALPHA = 0x10,
+	FLAG_SHIFT = 0x18,
+	PRIM_SHIFT = 0x1c,
+	ATTR_BLEND_SEMITRANS = 0x20,
+	ATTR_BLEND_ADD = 0x40,
+	ATTR_BLEND_SUB = 0x60,
+	ATTR_BLEND_MASK = 0xe0,
+	ATTR_8 = 0x100,
+	ATTR_9 = 0x200,
+	ATTR_DROPSHADOW = 0x400,
+	ATTR_ENVMAP = 0x800,
+	ATTR_12 = 0x1000,
+	ATTR_13 = 0x2000,
+	ATTR_14 = 0x4000,
+	ATTR_15 = 0x8000,
+	FLAG_COLOR = 0x1000000,
+	FLAG_NOWEIGHT = 0x2000000
+};
+
 struct PMO_MESH_HEADER
 {
 	// 0x00
@@ -195,9 +224,9 @@ struct PMO_MESH_HEADER
 
 	PMO_VERTEX_FLAGS dataFlags;
 
-	uint8  unknown0x08;
+	uint8  group;
 	uint8  triStripCount;
-	uint8  unknown0x0A[2];
+	uint16  attributes;
 };
 
 constexpr uint32 PMO_MAGIC_I = ('P' << 24) | ('M' << 16) | ('O' << 8) | ('\0' << 0);
@@ -207,9 +236,14 @@ struct PMO_HEADER
 {
 	// 0x00
 	char   fileTag[4]; // 'PMO'
-	uint8  unknown0x04[4];
-	uint16 textureCount; //
-	uint16 unknown0x0A;
+	//uint8  unknown0x04[4];
+	uint8 num;
+	uint8 group;
+	uint8 ver;
+	uint8 padding1;
+	uint8 textureCount; //
+	uint8 padding2;
+	uint16 unk_flag;
 	uint32 skeletonOffset;
 	// 0x10
 	uint32 meshOffset0;
@@ -224,13 +258,16 @@ struct PMO_HEADER
 struct PMP_HDR
 {
 	char magic[4];
-	uint32 unk_04;
-	uint32 unk_08;
-	uint32 unk_0C;
+	//uint32 unk_04;
+	uint16 version;
+	uint16 padding_06;
+	uint32 padding_08;
+	uint8 unk_0C[3];
+	uint8 unk_flag;
 	uint16 obj_count;
-	uint16 unk_12;
-	uint32 unk_14;
-	uint16 unk_18;
+	uint16 model_count;
+	uint32 padding_14;
+	uint16 padding_18;
 	uint16 tex_count;
 	uint32 tex_index_offset;
 };
@@ -262,16 +299,45 @@ struct OBJ_ENTRY
 	float rot[3];
 	float scale[3];
 	uint32 offset;
-	uint32 unk_28;	// Seems to always be 0
+	uint32 padding;
 	//uint32 unk_2C;
 	uint16 flags;
-	uint16 unk_2E; 	// Probably an object id number
+	uint16 object_id;
 };
 
 struct TEX_ENTRY
 {
 	uint32 offset;
-	char name[28];
+	char name[12];
+	float scrollX;
+	float scrollY;
+	uint32 padding[2];
+};
+
+constexpr uint32 PVD_MAGIC_I = ('P' << 24) | ('V' << 16) | ('D' << 8) | ('\0' << 0);
+constexpr char PVD_MAGIC_C[4] = { 'P', 'V', 'D', '\0' };
+
+struct PVD_FILE
+{
+	char magic[4];
+	uint16 version;
+	uint16 padding0;
+	uint32 padding1[2];
+
+	uint32 fogColor;
+	float fogNear;
+	float fogFar;
+	float clipNear;
+	float clipFar;
+	float glare;
+	uint32 clearColor;
+	uint32 flag;
+	float fov;
+	float basePos[3];
+	float camOffsetY;
+	float camRotX;
+	float camDist;
+	float camRotY;
 };
 
 #pragma pack(pop)

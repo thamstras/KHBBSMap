@@ -10,12 +10,14 @@ MeshBuilder::MeshBuilder()
 	child = new Mesh();
 }
 
-void MeshBuilder::BeginSection(GLenum primative_type, Texture *texture)
+void MeshBuilder::BeginSection(GLenum primative_type, Texture *texture, glm::vec2 uvScroll, int pass)
 {
 	current_primative = primative_type;
 	vert_list.clear();
 	current_vert.Reset();
 	current_texture = texture;
+	current_uvScroll = uvScroll;
+	current_pass = pass;
 }
 
 void MeshBuilder::EndSection(PMO_MESH_HEADER* raw)
@@ -37,7 +39,7 @@ void MeshBuilder::EndSection(PMO_MESH_HEADER* raw)
 	}
 
 	//MeshSection(vert_count, dat.data(), current_primative);
-	child->AddSection(vert_count, dat.data(), current_primative, current_texture, raw);
+	child->AddSection(vert_count, dat.data(), current_primative, current_texture, current_uvScroll, current_pass, raw);
 }
 
 void MeshBuilder::TexUV2f(float * uv)
@@ -98,15 +100,18 @@ Mesh *MeshBuilder::Finish()
 	return child;
 }
 
-MeshSection::MeshSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture, PMO_MESH_HEADER* raw)
+MeshSection::MeshSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture, glm::vec2 uvScroll, int pass, PMO_MESH_HEADER* raw)
 {
 	this->vert_count = vertex_count;
 	vert_data = (float *)malloc(vertex_count * 10 * sizeof(float));
 	memcpy(vert_data, data, vertex_count * 10 * sizeof(float));
 	this->draw_primative = primative_type;
 	this->texture = texture;
+	this->uvScroll = uvScroll;
 	this->raw = raw;
-	this->twoSided = raw->unknown0x0A[0] & 0x05;	// 0x04 or 0x01 seem to indicate two-sided
+	this->twoSided = raw->attributes & ATTR_BACK;
+	this->blend = raw->attributes & ATTR_BLEND_MASK;
+	this->pass = pass;
 
 	setup_ogl();
 }
@@ -159,18 +164,23 @@ void MeshSection::Draw(glm::mat4& model, RenderContext& context, std::shared_ptr
 	//shader->setMat4(uniform_model_name, model);
 	//shader->setMat4(uniform_view_name, context.render_viewMatrix);
 	//shader->setMat4(uniform_projection_name, context.render_projectionMatrix);
+	
+	glm::vec2 uvOffset = glm::vec2(uvScroll.x * context.frame_worldTime * 10.0f, uvScroll.y * context.frame_worldTime * 10.0f);
 
 	texture->ogl_loadIfNeeded();
 	GLuint texid = texture->getOglId();
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texid);
 	shader->setInt("tex_diffuse"s, 0);
+	shader->setVec2("uv_offset"s, uvOffset);
 	if (twoSided) glDisable(GL_CULL_FACE);
+	if (blend != 0 && !context.render_no_blend) glEnable(GL_BLEND);
 
 	glBindVertexArray(VAO);
 	glDrawArrays(draw_primative, 0, vert_count);
 
 	if (twoSided && !context.render_no_cull) glEnable(GL_CULL_FACE);
+	if (blend != 0 && !context.render_no_blend) glDisable(GL_BLEND);
 
 	context.stat_draw_calls += 1;
 	if (draw_primative == GL_TRIANGLES)
@@ -179,8 +189,11 @@ void MeshSection::Draw(glm::mat4& model, RenderContext& context, std::shared_ptr
 		context.stat_tris_drawn += vert_count - 2;
 }
 
+int MeshSection::PassNumber() { return this->pass; }
+
 void MeshSection::gui_PrintDetails()
 {
+	ImGui::BeginGroup();
 	//ImGui::Text("Primative: %s", draw_primative == GL_TRIANGLES ? "TRIANGLES" : "TRIANGLE_STRIP");
 	//ImGui::SameLine();
 	//ImGui::Text("Vertex Count: %d", vert_count);
@@ -202,9 +215,37 @@ void MeshSection::gui_PrintDetails()
 		ImGui::Text("TexCoord: %d", raw->dataFlags.texCoord);
 		ImGui::TreePop();
 	}
-	ImGui::Text("Unk0x08: 0x%02X", raw->unknown0x08);
-	ImGui::Text("Unk0x0A: 0x%02X 0x%02X", raw->unknown0x0A[0], raw->unknown0x0A[1]);
+	ImGui::Text("Grp: 0x%02X", raw->group);
+	if (ImGui::TreeNode((void*)1, "Attributes: 0x%04X", raw->attributes))
+	{
+#define FLAGCHECK(X) if (raw->attributes & X) ImGui::Text(#X)
+		FLAGCHECK(ATTR_BLEND_NONE);
+		FLAGCHECK(ATTR_NOMATERIAL);
+		FLAGCHECK(ATTR_GLARE);
+		FLAGCHECK(ATTR_BACK);
+		FLAGCHECK(ATTR_DIVIDE);
+		FLAGCHECK(ATTR_TEXALPHA);
+		//FLAGCHECK(FLAG_SHIFT);
+		//FLAGCHECK(PRIM_SHIFT);
+		FLAGCHECK(ATTR_BLEND_SEMITRANS);
+		FLAGCHECK(ATTR_BLEND_ADD);
+		FLAGCHECK(ATTR_BLEND_SUB);
+		FLAGCHECK(ATTR_BLEND_MASK);
+		FLAGCHECK(ATTR_8);
+		FLAGCHECK(ATTR_9);
+		FLAGCHECK(ATTR_DROPSHADOW);
+		FLAGCHECK(ATTR_ENVMAP);
+		//FLAGCHECK(ATTR_12);
+		//FLAGCHECK(ATTR_13);
+		//FLAGCHECK(ATTR_14);
+		//FLAGCHECK(ATTR_15);
+		//FLAGCHECK(FLAG_COLOR);
+		//FLAGCHECK(FLAG_NOWEIGHT);
+#undef FLAGCHECK
+		ImGui::TreePop();
+	}
 	ImGui::Separator();
+	ImGui::EndGroup();
 }
 
 Mesh::Mesh()
@@ -219,14 +260,16 @@ Mesh::~Mesh()
 	sections.clear();
 }
 
-void Mesh::AddSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture, PMO_MESH_HEADER* raw)
+void Mesh::AddSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture, glm::vec2 uvScroll, int pass, PMO_MESH_HEADER* raw)
 {
-	MeshSection *section = new MeshSection(vertex_count, data, primative_type, texture, raw);
+	MeshSection *section = new MeshSection(vertex_count, data, primative_type, texture, uvScroll, pass, raw);
 	sections.push_back(section);
 }
 
-void Mesh::Draw(RenderContext& context)
+void Mesh::Draw(RenderContext& context, int pass)
 {
+	if (flags.isSkybox && pass != 0) return;
+
 	static const std::string uniform_model_name = "model";
 	static const std::string uniform_view_name = "view";
 	static const std::string uniform_projection_name = "projection";
@@ -310,6 +353,7 @@ void Mesh::Draw(RenderContext& context)
 	for (int i = 0; i < sections.size(); i++)
 	{
 		MeshSection *section = sections[i];
+		if (section->PassNumber() != pass && !flags.isSkybox) continue;
 
 		std::shared_ptr<Shader> useShader = shader;
 

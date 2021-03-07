@@ -26,6 +26,7 @@ std::vector<std::pair<OBJ_ENTRY *, PMO_HEADER *>> map_objects;
 std::vector<std::pair<std::string, TM2_HEADER *>> map_textures;
 
 std::unordered_map<std::string, Texture *> render_textures;
+std::unordered_map<std::string, glm::vec2> texture_scrolls;
 std::vector<Mesh *> render_meshes;
 
 Texture *g_dummyTexture = nullptr;
@@ -66,9 +67,9 @@ void gui_object_view(unsigned int object_id)
 	ImGui::Text("Location: {%2.f, %2.f, %2.f}", obj_entry->loc[0], obj_entry->loc[1], obj_entry->loc[2]);
 	ImGui::Text("Rotation: {%2.f, %2.f, %2.f}", obj_entry->rot[0], obj_entry->rot[1], obj_entry->rot[2]);
 	ImGui::Text("Scale:    {%2.f, %2.f, %2.f}", obj_entry->scale[0], obj_entry->scale[1], obj_entry->scale[2]);
-	ImGui::Text("Unk_28:    0x%08X", obj_entry->unk_28);
+	//ImGui::Text("Unk_28:    0x%08X", obj_entry->unk_28);
 	ImGui::Text("Flags:     0x%04X", obj_entry->flags);
-	ImGui::Text("Unk_2E:    0x%04X", obj_entry->unk_2E);
+	ImGui::Text("Unk_2E:    0x%04X", obj_entry->object_id);
 
 	ImGui::Separator();
 
@@ -78,14 +79,14 @@ void gui_object_view(unsigned int object_id)
 	}
 	else
 	{
-		ImGui::Text("Unk_04:    %02X, %02X, %02X, %02X", obj_pmo->unknown0x04);
+		ImGui::Text("Num: %02X Grp: %02X Ver: %02X", obj_pmo->num, obj_pmo->group, obj_pmo->ver);
 		ImGui::Text("Texture Count: %d", obj_pmo->textureCount);
-		ImGui::Text("Unk_0A:    0x%04X", obj_pmo->unknown0x0A);
-		ImGui::Text("Skeleton Offset: 0x%08X", obj_pmo->skeletonOffset);
-		ImGui::Text("Mesh 0 Offset: 0x%08X", obj_pmo->meshOffset0);
+		ImGui::Text("Flag: 0x%02X", obj_pmo->unk_flag);
+		ImGui::Text("Skeleton Offset: 0x%08X", (intptr_t)(obj_pmo->skeletonOffset));
+		ImGui::Text("Mesh 0 Offset: 0x%08X", (intptr_t)(obj_pmo->meshOffset0));
 		ImGui::Text("Vertex Count: %d", obj_pmo->vertexCount);
 		ImGui::Text("Model Scale: %2.f", obj_pmo->modelScale);
-		ImGui::Text("Mesh 1 Offset: 0x%08X", obj_pmo->meshOffset1);
+		ImGui::Text("Mesh 1 Offset: 0x%08X", (intptr_t)(obj_pmo->meshOffset1));
 		ImGui::Text("Bounding Box: NYI");
 	}
 
@@ -197,7 +198,6 @@ void gui_map_object(std::pair<OBJ_ENTRY *, PMO_HEADER *> object_entry, int id)
 		ImGui::Text("Location: {%2.f, %2.f, %2.f}", object_entry.first->loc[0], object_entry.first->loc[1], object_entry.first->loc[2]);
 		ImGui::Text("Rotation: {%2.f, %2.f, %2.f}", object_entry.first->rot[0], object_entry.first->rot[1], object_entry.first->rot[2]);
 		ImGui::Text("Scale:    {%2.f, %2.f, %2.f}", object_entry.first->scale[0], object_entry.first->scale[1], object_entry.first->scale[2]);
-		ImGui::Text("Unknown A: 0x%08X", object_entry.first->unk_28);
 		if (ImGui::TreeNode((void *)1, "Flags:    0x%04X", object_entry.first->flags))
 		{
 			uint16 flags = object_entry.first->flags;
@@ -219,7 +219,7 @@ void gui_map_object(std::pair<OBJ_ENTRY *, PMO_HEADER *> object_entry, int id)
 			ImGui::Text("%d", (bool)(flags & (1 << 15)));
 			ImGui::TreePop();
 		}
-		ImGui::Text("Unknown B: 0x%04X", object_entry.first->unk_2E);
+		ImGui::Text("Unknown B: 0x%04X", object_entry.first->object_id);
 		if (ImGui::TreeNode("PMO"))
 		{
 			if (object_entry.second == nullptr)
@@ -307,7 +307,12 @@ void RenderBBSMap(RenderContext& context)
 {
 	for (auto mesh : render_meshes)
 	{
-		mesh->Draw(context);
+		mesh->Draw(context, 0);
+	}
+
+	for (auto mesh : render_meshes)
+	{
+		mesh->Draw(context, 1);
 	}
 }
 
@@ -446,7 +451,7 @@ void ParseVertex(PMO_MESH_HEADER *meshHeader, uint8 *vertexStart, uint8 *jointIn
 }
 
 // more revel8ion code...
-void LoadSectionGroup(PMO_HEADER *pmo_header, PMO_MESH_HEADER *mesh_header, int numBones, MeshBuilder& builder, std::vector<std::string> textures)
+void LoadSectionGroup(PMO_HEADER *pmo_header, PMO_MESH_HEADER *mesh_header, int pass, int numBones, MeshBuilder& builder, std::vector<std::string> textures)
 {
 	int meshIndex = 0;
 	while (mesh_header->vertexCount)
@@ -490,6 +495,7 @@ void LoadSectionGroup(PMO_HEADER *pmo_header, PMO_MESH_HEADER *mesh_header, int 
 		//int texIndex = (mesh_header->textureID != 0xFF) ? (mesh_header->textureID + 1) : (0);
 		int texIndex = -1;
 		Texture *texture = nullptr;
+		glm::vec2 scroll = glm::vec2(0.0f, 0.0f);
 		if (mesh_header->textureID == 0xFF)
 			texIndex = -1;
 		else
@@ -498,6 +504,10 @@ void LoadSectionGroup(PMO_HEADER *pmo_header, PMO_MESH_HEADER *mesh_header, int 
 		{
 			std::string tex_name = textures[texIndex];
 			texture = render_textures.at(tex_name);
+			if (texture_scrolls.find(tex_name) != texture_scrolls.end())
+			{
+				scroll = texture_scrolls.at(tex_name);
+			}
 		}
 		else
 		{
@@ -518,7 +528,7 @@ void LoadSectionGroup(PMO_HEADER *pmo_header, PMO_MESH_HEADER *mesh_header, int 
 					continue;
 
 				//rapi->rpgBegin(RPGEO_TRIANGLE_STRIP);
-				builder.BeginSection(GL_TRIANGLE_STRIP, texture);
+				builder.BeginSection(GL_TRIANGLE_STRIP, texture, scroll, pass);
 				uint32 vertexNum = 0;
 				for (vertexNum = 0; vertexNum < vertexCount; ++vertexNum, vertexStart += mesh_header->vertexSize)
 				{
@@ -535,7 +545,7 @@ void LoadSectionGroup(PMO_HEADER *pmo_header, PMO_MESH_HEADER *mesh_header, int 
 			uint32 vertexCount = mesh_header->vertexCount;
 
 			//rapi->rpgBegin(RPGEO_TRIANGLE);
-			builder.BeginSection(GL_TRIANGLES, texture);
+			builder.BeginSection(GL_TRIANGLES, texture, scroll, pass);
 			uint32 vertexNum = 0;
 			for (vertexNum = 0; vertexNum < vertexCount; ++vertexNum, vertexStart += mesh_header->vertexSize)
 			{
@@ -595,7 +605,7 @@ void LoadMapObjects()
 				uint8 *groupStart = (uint8 *)((char *)obj_entry.second + meshOffsets[groupNum]);
 
 				//Model_KHBBS_LoadModel(fileBuffer, groupStart, textures, materials, bones, numBones, rapi);
-				LoadSectionGroup(obj_entry.second, (PMO_MESH_HEADER *)groupStart, numBones, builder, tex_list);
+				LoadSectionGroup(obj_entry.second, (PMO_MESH_HEADER *)groupStart, groupNum, numBones, builder, tex_list);
 			}
 		}
 
@@ -837,6 +847,10 @@ void ParseLoadedMap()
 		{
 			tex_count++;
 			map_textures.push_back(std::make_pair(texture.name, tim2));
+		}
+		if (texture.scrollX != 0.0f || texture.scrollY != 0.0f)
+		{
+			texture_scrolls.emplace(texture.name, glm::vec2(texture.scrollX, texture.scrollY));
 		}
 	}
 	std::cout << "Parse found " << tex_count << " textures" << std::endl;
