@@ -485,6 +485,7 @@ void gui_DrawDebugGui(RenderContext& context)
 
 void gui_DrawEnvGui(FileManager& fileManager, RenderContext& context)
 {
+	bool loadPVD = false;
 	float viewAngle = glm::radians(g_camera.Zoom);
 	ImGui::Begin("Environment");
 	
@@ -512,6 +513,13 @@ void gui_DrawEnvGui(FileManager& fileManager, RenderContext& context)
 	
 	if (ImGui::Button("Load Env (PVD)"))
 	{
+		loadPVD = true;
+	}
+
+	ImGui::End();
+
+	if (loadPVD)
+	{
 		std::string path;
 		if (fileManager.OpenFileWindow(path))
 		{
@@ -524,13 +532,13 @@ void gui_DrawEnvGui(FileManager& fileManager, RenderContext& context)
 				std::cerr << "Not a valid PVD file!" << std::endl;
 				return;
 			}
-			
+
 			// fog color
 			std::fseek(file, 0x10, SEEK_SET);
 			glm::u8vec4 colorIn;
 			std::fread((void*)(glm::value_ptr(colorIn)), sizeof(glm::u8), 4, file);
-			context.fogColor = glm::vec4((float)colorIn.r/255.0f, (float)colorIn.g/255.0f, (float)colorIn.b/255.0f, (float)colorIn.a/255.0f);
-			
+			context.fogColor = glm::vec4((float)colorIn.r / 255.0f, (float)colorIn.g / 255.0f, (float)colorIn.b / 255.0f, (float)colorIn.a / 255.0f);
+
 			std::fread((void*)(&context.fogNear), sizeof(float), 1, file);
 			std::fread((void*)(&context.fogFar), sizeof(float), 1, file);
 			std::fread((void*)(&context.render_nearClip), sizeof(float), 1, file);
@@ -549,8 +557,6 @@ void gui_DrawEnvGui(FileManager& fileManager, RenderContext& context)
 			std::fclose(file);
 		}
 	}
-
-	ImGui::End();
 }
 
 void shutdown_gs()
@@ -626,7 +632,7 @@ int main(int argc, char **argv)
 	RenderContext globalRenderContext;
 	globalRenderContext.render_wireframe = false;
 	globalRenderContext.render_no_blend = false;
-	globalRenderContext.render_no_cull = true;
+	globalRenderContext.render_no_cull = false;
 	globalRenderContext.render_no_texture = false;
 
 	globalRenderContext.render_nearClip = 0.1f;

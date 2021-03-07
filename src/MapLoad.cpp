@@ -503,7 +503,11 @@ void LoadSectionGroup(PMO_HEADER *pmo_header, PMO_MESH_HEADER *mesh_header, int 
 		if (texIndex >= 0)
 		{
 			std::string tex_name = textures[texIndex];
-			texture = render_textures.at(tex_name);
+			if (render_textures.find(tex_name) == render_textures.end())
+				texture = g_dummyTexture;
+			else
+				texture = render_textures.at(tex_name);
+
 			if (texture_scrolls.find(tex_name) != texture_scrolls.end())
 			{
 				scroll = texture_scrolls.at(tex_name);

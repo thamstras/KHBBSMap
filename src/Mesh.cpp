@@ -269,10 +269,6 @@ void Mesh::AddSection(unsigned int vertex_count, float *data, GLenum primative_t
 void Mesh::Draw(RenderContext& context, int pass)
 {
 	if (flags.isSkybox && pass != 0) return;
-
-	static const std::string uniform_model_name = "model";
-	static const std::string uniform_view_name = "view";
-	static const std::string uniform_projection_name = "projection";
 	
 	bool flipFace = false;
 
@@ -301,12 +297,12 @@ void Mesh::Draw(RenderContext& context, int pass)
 
 			// preload sectionShader uniforms
 			sectionShader->use();
-			sectionShader->setMat4(uniform_model_name, model);
+			sectionShader->setMat4("model"s, model);
 			if (flags.isSkybox)
-				sectionShader->setMat4(uniform_view_name, context.render_skyViewMatrix);
+				sectionShader->setMat4("view"s, context.render_skyViewMatrix);
 			else
-				sectionShader->setMat4(uniform_view_name, context.render_viewMatrix);
-			sectionShader->setMat4(uniform_projection_name, context.render_projectionMatrix);
+				sectionShader->setMat4("view"s, context.render_viewMatrix);
+			sectionShader->setMat4("projection"s, context.render_projectionMatrix);
 
 			shader = context.shaderLibrary->GetShader(context.default_shader);
 		}
@@ -337,12 +333,12 @@ void Mesh::Draw(RenderContext& context, int pass)
 	}
 
 	shader->use();
-	shader->setMat4(uniform_model_name, model);
+	shader->setMat4("model"s, model);
 	if (flags.isSkybox)
-		shader->setMat4(uniform_view_name, context.render_skyViewMatrix);
+		shader->setMat4("view"s, context.render_skyViewMatrix);
 	else
-		shader->setMat4(uniform_view_name, context.render_viewMatrix);
-	shader->setMat4(uniform_projection_name, context.render_projectionMatrix);
+		shader->setMat4("view"s, context.render_viewMatrix);
+	shader->setMat4("projection"s, context.render_projectionMatrix);
 
 	if (flags.isSkybox /*| flags.isDecal*/)
 		glDepthMask(GL_FALSE);
