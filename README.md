@@ -1,5 +1,22 @@
 # Kingdom Hearts BBS Map Viewer
 
+## Usage
+Firstly obtain the binaries, either from a release or by building the source. (details below)
+
+Next you'll need to extract the data from BBS's archives to view;
+* Obtain BBS0.DAT, BBS1.DAT, BBS2.DAT and BBS3.DAT from a copy of BBS and decrypt them. I can't help you with this, google it or ask on the OpenKH discord.
+* Get the latest version of [OpenKH](https://github.com/Xeeynamo/OpenKh/releases).
+* Use `OpenKh.Command.Bbsa.exe` to extract the .DAT files.
+* The maps are bundled inside `.arc` files inside `arc/map`. Use `OpenKh.Command.Arc.exe` to extract one.
+* Launch `KHBBSMap.exe` and select the extracted `.pmp` file.
+* Click the "Load Env (PVD)" button in the environment window and select the extracted `.pvd` file.
+
+Use `W`, `A`, `S` and `D` to move the camera around. Click and drag with the mouse to re-orient it. Hold `shift` to move a bit faster.
+
+Most GUI windows can be collapsed by clicking the small arrow in their top left corner. Some can be closed by clicking the x in their top right corner. The GUI reveals a lot of info about the file you've loaded if you look around. You can access this through the checkboxes in the `system` window.
+
+Exporting can be accessed though `File`->`Export...`. The exported `.fbx` and all textures will be placed in `.\resources\export`. This currently can't be changed so make sure to move the resulting files or some textures may be overwritten. The actual `.fbx` will be named after the loaded `.pmp` file. Please note that "material" export is very limited and some work *will* be required after importing into your 3D package of choice in order to get the map displaying correctly. If the map imports very small, it is suggested to scale by 100x. Meshes which form part of the "skybox" cannot be meaningfully positioned in the scene. They will be exported at unit scale at the origin. You should either attach them to the camera and/or re-scale them to be "really" big.
+
 ## Building
 This project uses [Premake 5](https://github.com/premake/premake-core/releases) to generate it's build files. You'll also need the following:
 
