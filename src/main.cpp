@@ -110,7 +110,11 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-	if (g_window.hasCursorLock) g_camera.ProcessMouseScroll(yoffset);
+	/*if (g_window.hasCursorLock)*/ 
+	if (!ImGui::GetIO().WantCaptureMouse)
+	{
+		g_camera.ProcessMouseScroll(yoffset);
+	}
 }
 
 void processInput(GLFWwindow *window)
@@ -216,10 +220,12 @@ bool init(FileManager& fileManager)
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	if (USE_ANTIALIASING) glEnable(GL_MULTISAMPLE);
-	glEnable(GL_BLEND);
+	//glEnable(GL_BLEND);
+	glEnable(GL_LINE_SMOOTH);
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+	glDepthFunc(GL_LEQUAL);
 
 	// ## INIT IMGUI ##
 
@@ -459,6 +465,8 @@ void gui_DrawDebugGui(RenderContext& context)
 
 void shutdown_gs()
 {
+	UnloadBBSMap();
+
 	std::cout << "[GS] Shutting down..." << std::endl;
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
