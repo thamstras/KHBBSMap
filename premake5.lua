@@ -53,12 +53,12 @@ workspace "KHBBSMap"
         defines("GLFW_DLL")
         links("glfw3dll")
         filter("configurations:Debug")
-            postbuildcommands("{COPY} " .. GLFW_PATH .. "src/Debug/glfw3.dll %{cfg.targetdir}")
-            postbuildcommands("{COPY} " .. GLFW_PATH .. "src/Debug/glfw3.pdb %{cfg.targetdir}")
-            libdirs(GLFW_PATH .. "src/Debug")
+            postbuildcommands("{COPY} " .. GLFW_PATH .. "Win32/src/Debug/glfw3.dll %{cfg.targetdir}")
+            postbuildcommands("{COPY} " .. GLFW_PATH .. "Win32/src/Debug/glfw3.pdb %{cfg.targetdir}")
+            libdirs(GLFW_PATH .. "Win32/src/Debug")
         filter("configurations:Release")
-            postbuildcommands("{COPY} ".. GLFW_PATH .. "src/Release/glfw3.dll %{cfg.targetdir}")
-            libdirs(GLFW_PATH .. "src/Release")
+            postbuildcommands("{COPY} ".. GLFW_PATH .. "Win32/src/Release/glfw3.dll %{cfg.targetdir}")
+            libdirs(GLFW_PATH .. "Win32/src/Release")
             --libdirs(GLFW_PATH .. "src/RelWithDebInfo") -- NOTE: you'll need to change the postbuildcommands as well.
         filter({})
 

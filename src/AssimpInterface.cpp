@@ -265,11 +265,23 @@ unsigned int AssimpExporter::AddSection(MeshSection* section, Mesh* parent)
 void AssimpExporter::EndExport(std::string folderPath, std::string mapname)
 {
 	std::filesystem::path exportFolder = std::filesystem::path(folderPath);
-	if (!std::filesystem::exists(exportFolder) || !std::filesystem::is_directory(exportFolder))
+
+	if (std::filesystem::exists(exportFolder))
 	{
-		// TODO: Error
-		std::cerr << "Problem with export path: " << folderPath << std::endl;
-		return;
+		if (!std::filesystem::is_directory(exportFolder))
+		{
+			// TODO: Error
+			std::cerr << "[Export] Export path " << folderPath << " is not a directory!" << std::endl;
+			return;
+		}
+	}
+	else
+	{
+		if (!std::filesystem::create_directories(exportFolder))
+		{
+			std::cerr << "[Export] Could not create directory " << folderPath << "!" << std::endl;
+			return;
+		}
 	}
 
 	for (int i = 0; i < textureList.size(); i++)
@@ -304,7 +316,7 @@ void AssimpExporter::EndExport(std::string folderPath, std::string mapname)
 		if (stbi_write_png(outPath.string().c_str(), tex->getWidth(), tex->getHeight(), 4, tex->getPixels(), tex->getWidth() * 4) == 0)
 		{
 			// TODO: error
-			std::cerr << "Failed to write texture " << name << std::endl;
+			std::cerr << "[Export] Failed to write texture " << name << std::endl;
 		}
 
 		
@@ -321,7 +333,7 @@ void AssimpExporter::EndExport(std::string folderPath, std::string mapname)
 	Assimp::Exporter exp = Assimp::Exporter();
 	if (AI_SUCCESS != exp.Export(finalScene, "fbx", outFile.string(), aiPostProcessSteps::aiProcess_FlipUVs))
 	{
-		std::cerr << "Failed to export fbx file!" << std::endl;
+		std::cerr << "[Export] Failed to export fbx file!" << std::endl;
 	}
 
 	delete finalScene;
