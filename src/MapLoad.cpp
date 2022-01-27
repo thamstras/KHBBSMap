@@ -310,10 +310,12 @@ void RenderBBSMap(RenderContext& context)
 		mesh->Draw(context, 0);
 	}
 
+	glDepthMask(GL_FALSE);
 	for (auto mesh : render_meshes)
 	{
 		mesh->Draw(context, 1);
 	}
+	glDepthMask(GL_TRUE);
 }
 
 // Almost this entire function is revel8ion code...

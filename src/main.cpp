@@ -250,9 +250,6 @@ bool init(FileManager& fileManager)
 
 void Render_StartFrame(RenderContext& context)
 {
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	if (context.render_no_cull)
 		glDisable(GL_CULL_FACE);
 	else
@@ -297,6 +294,7 @@ void Render_StartFrame(RenderContext& context)
 	}
 
 	glClearColor(context.clearColor.r, context.clearColor.g, context.clearColor.b, context.clearColor.a);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 bool gui_show_map_data = false;

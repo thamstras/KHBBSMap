@@ -165,7 +165,7 @@ void MeshSection::Draw(glm::mat4& model, RenderContext& context, std::shared_ptr
 	//shader->setMat4(uniform_view_name, context.render_viewMatrix);
 	//shader->setMat4(uniform_projection_name, context.render_projectionMatrix);
 	
-	glm::vec2 uvOffset = glm::vec2(uvScroll.x * context.frame_worldTime * 10.0f, uvScroll.y * context.frame_worldTime * 10.0f);
+	glm::vec2 uvOffset = glm::vec2(uvScroll.x * context.frame_worldTime * 30.0f, uvScroll.y * context.frame_worldTime * 30.0f);
 
 	texture->ogl_loadIfNeeded();
 	GLuint texid = texture->getOglId();
