@@ -236,6 +236,7 @@ bool init(FileManager& fileManager)
 	ImGui::StyleColorsLight();
 	ImGui::GetStyle().ColorButtonPosition = ImGuiDir_Left;
 	ImGui::GetStyle().FrameBorderSize = 1.0f;
+	ImGui::GetStyle().WindowRounding = 7.0f;
 	ImGui_ImplGlfw_InitForOpenGL(g_window.window, true);
 	ImGui_ImplOpenGL3_Init();
 	
