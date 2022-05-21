@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <cstring>
 #include "imgui.h"
-#include "Texture.h"
+#include "Core\CTexture.h"
 #include <unordered_map>
 #include "Mesh.h"
 #include <algorithm>
@@ -25,11 +25,11 @@ TEX_ENTRY * tex_index = nullptr;
 std::vector<std::pair<OBJ_ENTRY *, PMO_HEADER *>> map_objects;
 std::vector<std::pair<std::string, TM2_HEADER *>> map_textures;
 
-std::unordered_map<std::string, Texture *> render_textures;
+std::unordered_map<std::string, CTexture *> render_textures;
 std::unordered_map<std::string, glm::vec2> texture_scrolls;
 std::vector<Mesh *> render_meshes;
 
-Texture *g_dummyTexture = nullptr;
+CTexture *g_dummyTexture = nullptr;
 uint16 g_flagsSeen = 0;
 uint8 g_maxTexPathLen = 0;
 
@@ -127,7 +127,7 @@ void gui_tex_view()
 		return;
 	}
 	
-	Texture* target = render_textures.at(tex_target);
+	CTexture* target = render_textures.at(tex_target);
 	target->ogl_loadIfNeeded();
 	
 	ImGui::Text("Texture Name: %s", tex_target.c_str());
@@ -496,7 +496,7 @@ void LoadSectionGroup(PMO_HEADER *pmo_header, PMO_MESH_HEADER *mesh_header, int 
 		// determine mesh material index
 		//int texIndex = (mesh_header->textureID != 0xFF) ? (mesh_header->textureID + 1) : (0);
 		int texIndex = -1;
-		Texture *texture = nullptr;
+		CTexture *texture = nullptr;
 		glm::vec2 scroll = glm::vec2(0.0f, 0.0f);
 		if (mesh_header->textureID == 0xFF)
 			texIndex = -1;
@@ -571,7 +571,7 @@ void LoadMapObjects()
 	if (g_dummyTexture == nullptr)
 	{
 		uint8 pix[] = { 0xFF, 0xFF, 0xFF, 0xFF };
-		g_dummyTexture = new Texture(1, 1, pix, PF_RGBA32);
+		g_dummyTexture = new CTexture(1, 1, pix, PF_RGBA32);
 	}
 	
 	for (int obj_id = 0; obj_id < map_objects.size(); obj_id++)
@@ -795,7 +795,7 @@ void LoadMapTextures()
 		}
 		// end of revel8n code.
 
-		Texture *actualTexture = new Texture(psWidth, psHeight, tempImage, PF_RGBA32, tex_entry.second);
+		CTexture *actualTexture = new CTexture(psWidth, psHeight, tempImage, PF_RGBA32, tex_entry.second);
 		render_textures.emplace(tex_entry.first, actualTexture);
 		free(tempImage);
 	}

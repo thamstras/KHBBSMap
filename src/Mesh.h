@@ -1,8 +1,8 @@
 #pragma once
 #include "Common.h"
-#include "Shader.h"
+#include "Core\CShader.h"
 #include <cstdint>
-#include "Texture.h"
+#include "Core\CTexture.h"
 #include "Render.h"
 #include "BBSTypes.h"
 
@@ -28,10 +28,10 @@ struct OmniVert
 class MeshSection
 {
 public:
-	MeshSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture, glm::vec2 uvScroll, int pass, PMO_MESH_HEADER* raw);
+	MeshSection(unsigned int vertex_count, float *data, GLenum primative_type, CTexture *texture, glm::vec2 uvScroll, int pass, PMO_MESH_HEADER* raw);
 	~MeshSection();
 
-	void Draw(glm::mat4& model, RenderContext& context, std::shared_ptr<Shader> shader);
+	void Draw(glm::mat4& model, RenderContext& context, std::shared_ptr<CShader> shader);
 	void gui_PrintDetails();
 	int PassNumber();
 private:
@@ -41,7 +41,7 @@ private:
 	void setup_ogl();
 	GLuint VBO, VAO;
 	GLenum draw_primative;
-	Texture *texture;
+	CTexture *texture;
 	bool twoSided;
 	uint16 blend;
 	glm::vec2 uvScroll;
@@ -66,7 +66,7 @@ public:
 
 	int mesh_idx;
 
-	void AddSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture, glm::vec2 uvScroll, int pass, PMO_MESH_HEADER* raw);
+	void AddSection(unsigned int vertex_count, float *data, GLenum primative_type, CTexture *texture, glm::vec2 uvScroll, int pass, PMO_MESH_HEADER* raw);
 	void Draw(RenderContext& context, int pass);
 	void SetPosRotScale(glm::vec3 pos, glm::vec3 rot, glm::vec3 scale);
 	void SetFlags(MeshFlags flags);
@@ -93,7 +93,7 @@ class MeshBuilder
 public:
 	MeshBuilder();
 
-	void BeginSection(GLenum primative_type, Texture *texture, glm::vec2 uvScroll, int pass);
+	void BeginSection(GLenum primative_type, CTexture *texture, glm::vec2 uvScroll, int pass);
 	void EndSection(PMO_MESH_HEADER* raw);
 	
 	void TexUV2f(float *uv);
@@ -108,7 +108,7 @@ private:
 	OmniVert current_vert;
 	std::vector<OmniVert> vert_list;
 	GLenum current_primative;
-	Texture *current_texture;
+	CTexture *current_texture;
 	glm::vec2 current_uvScroll;
 	int current_pass;
 	Mesh *child;

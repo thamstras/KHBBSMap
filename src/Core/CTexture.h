@@ -9,11 +9,11 @@ enum PixelFormat
 
 size_t PixelFormatSize(PixelFormat pf);
 
-class Texture
+class CTexture
 {
 public:
-	Texture(uint32_t width, uint32_t height, uint8_t *data, PixelFormat format, void* userPtr = nullptr);
-	~Texture();
+	CTexture(uint32_t width, uint32_t height, uint8_t *data, PixelFormat format, void* userPtr = nullptr);
+	virtual ~CTexture();
 
 	void ogl_loadIfNeeded();
 	void ogl_unload();

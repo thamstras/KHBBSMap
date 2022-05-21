@@ -1,6 +1,6 @@
 #pragma once
 #include "Common.h"
-#include "Texture.h"
+#include "Core\CTexture.h"
 #include "Mesh.h"
 #include <map>
 #include <assimp/scene.h>
@@ -44,7 +44,7 @@ public:
 
 	void BeginExport();
 
-	void AddTexture(std::string name, Texture* texture);
+	void AddTexture(std::string name, CTexture* texture);
 
 	void AddMesh(Mesh* mesh);
 
@@ -56,7 +56,7 @@ private:
 
 	std::map<std::string, int> textureMap;
 	std::map<int, std::string> textureUnmap;
-	std::vector<Texture*> textureList;
+	std::vector<CTexture*> textureList;
 
 	aiSceneWrapper* scene;
 };

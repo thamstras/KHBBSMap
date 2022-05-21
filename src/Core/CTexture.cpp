@@ -1,4 +1,4 @@
-#include "Texture.h"
+#include "CTexture.h"
 
 size_t PixelFormatSize(PixelFormat pf)
 {
@@ -11,7 +11,7 @@ size_t PixelFormatSize(PixelFormat pf)
 	return -1; // This will def cause an alloc error.
 }
 
-Texture::Texture(uint32_t width, uint32_t height, uint8_t *data, PixelFormat format, void* userPtr)
+CTexture::CTexture(uint32_t width, uint32_t height, uint8_t *data, PixelFormat format, void* userPtr)
 {
 	this->width = width;
 	this->height = height;
@@ -35,12 +35,12 @@ Texture::Texture(uint32_t width, uint32_t height, uint8_t *data, PixelFormat for
 	this->userPtr = userPtr;
 }
 
-Texture::~Texture()
+CTexture::~CTexture()
 {
 	free(this->data);
 }
 
-void Texture::ogl_loadIfNeeded()
+void CTexture::ogl_loadIfNeeded()
 {
 	if (ogl_loaded) return;
 
@@ -56,33 +56,33 @@ void Texture::ogl_loadIfNeeded()
 	ogl_loaded = true;
 }
 
-void Texture::ogl_unload()
+void CTexture::ogl_unload()
 {
 	glDeleteTextures(1, &ogl_texid);
 	ogl_loaded = false;
 }
 
-uint32_t Texture::getWidth() const
+uint32_t CTexture::getWidth() const
 {
 	return width;
 }
 
-uint32_t Texture::getHeight() const
+uint32_t CTexture::getHeight() const
 {
 	return height;
 }
 
-const uint8_t* Texture::getPixels() const
+const uint8_t* CTexture::getPixels() const
 {
 	return (data);
 }
 
-GLuint Texture::getOglId() const
+GLuint CTexture::getOglId() const
 {
 	return ogl_texid;
 }
 
-bool Texture::isLoaded() const
+bool CTexture::isLoaded() const
 {
 	return ogl_loaded;
 }

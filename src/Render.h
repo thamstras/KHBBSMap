@@ -1,7 +1,7 @@
 #pragma once
 #include "Common.h"
-#include "Shader.h"
-#include "ShaderLibrary.h"
+#include "Core\CShader.h"
+#include "Core\ShaderLibrary.h"
 
 struct RenderContext
 {

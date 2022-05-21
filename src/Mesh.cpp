@@ -10,7 +10,7 @@ MeshBuilder::MeshBuilder()
 	child = new Mesh();
 }
 
-void MeshBuilder::BeginSection(GLenum primative_type, Texture *texture, glm::vec2 uvScroll, int pass)
+void MeshBuilder::BeginSection(GLenum primative_type, CTexture *texture, glm::vec2 uvScroll, int pass)
 {
 	current_primative = primative_type;
 	vert_list.clear();
@@ -100,7 +100,7 @@ Mesh *MeshBuilder::Finish()
 	return child;
 }
 
-MeshSection::MeshSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture, glm::vec2 uvScroll, int pass, PMO_MESH_HEADER* raw)
+MeshSection::MeshSection(unsigned int vertex_count, float *data, GLenum primative_type, CTexture *texture, glm::vec2 uvScroll, int pass, PMO_MESH_HEADER* raw)
 {
 	this->vert_count = vertex_count;
 	vert_data = (float *)malloc(vertex_count * 10 * sizeof(float));
@@ -144,7 +144,7 @@ void MeshSection::setup_ogl()
 
 }
 
-void MeshSection::Draw(glm::mat4& model, RenderContext& context, std::shared_ptr<Shader> shader)
+void MeshSection::Draw(glm::mat4& model, RenderContext& context, std::shared_ptr<CShader> shader)
 {
 	// TODO: Change the Shader interface to use raw c strings.
 	// Passing string constants into the Shader interface causes a
@@ -260,7 +260,7 @@ Mesh::~Mesh()
 	sections.clear();
 }
 
-void Mesh::AddSection(unsigned int vertex_count, float *data, GLenum primative_type, Texture *texture, glm::vec2 uvScroll, int pass, PMO_MESH_HEADER* raw)
+void Mesh::AddSection(unsigned int vertex_count, float *data, GLenum primative_type, CTexture *texture, glm::vec2 uvScroll, int pass, PMO_MESH_HEADER* raw)
 {
 	MeshSection *section = new MeshSection(vertex_count, data, primative_type, texture, uvScroll, pass, raw);
 	sections.push_back(section);
@@ -280,8 +280,8 @@ void Mesh::Draw(RenderContext& context, int pass)
 
 	if (glm::determinant(glm::mat3(model)) < 0.0f) flipFace = true;
 
-	std::shared_ptr<Shader> shader;
-	std::shared_ptr<Shader> sectionShader;
+	std::shared_ptr<CShader> shader;
+	std::shared_ptr<CShader> sectionShader;
 
 	
 	if (context.debug_active && context.debug_obj_id == mesh_idx)
@@ -351,7 +351,7 @@ void Mesh::Draw(RenderContext& context, int pass)
 		MeshSection *section = sections[i];
 		if (section->PassNumber() != pass && !flags.isSkybox) continue;
 
-		std::shared_ptr<Shader> useShader = shader;
+		std::shared_ptr<CShader> useShader = shader;
 
 		bool useSectionShader = context.debug_active && context.debug_section
 			&& context.debug_obj_id == mesh_idx && context.debug_section_id == i;

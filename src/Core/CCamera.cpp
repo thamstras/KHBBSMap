@@ -1,7 +1,7 @@
 #include "Common.h"
-#include "Camera.h"
+#include "CCamera.h"
 
-Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
+CCamera::CCamera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
 	: Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM), MovementMultiplier(1.0f)
 {
 	Position = position;
@@ -11,7 +11,7 @@ Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
 	updateCameraVectors();
 }
 
-Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch)
+CCamera::CCamera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch)
 	: Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM), MovementMultiplier(1.0f)
 {
 	Position = glm::vec3(posX, posY, posZ);
@@ -21,12 +21,12 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
 	updateCameraVectors();
 }
 
-glm::mat4 Camera::GetViewMatrix()
+glm::mat4 CCamera::GetViewMatrix()
 {
 	return glm::lookAt(Position, Position + Front, Up);
 }
 
-void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
+void CCamera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
 {
 	float velocity = MovementSpeed * deltaTime * MovementMultiplier;
 	if (direction == FORWARD)
@@ -39,7 +39,7 @@ void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
 		Position += Right * velocity;
 }
 
-void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch)
+void CCamera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch)
 {
 	xoffset *= MouseSensitivity;
 	yoffset *= MouseSensitivity;
@@ -60,7 +60,7 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
 	updateCameraVectors();
 }
 
-void Camera::ProcessMouseScroll(float yoffset)
+void CCamera::ProcessMouseScroll(float yoffset)
 {
 	if (Zoom >= 1.0f && Zoom <= 90.0f)
 		Zoom -= yoffset;
@@ -70,7 +70,7 @@ void Camera::ProcessMouseScroll(float yoffset)
 		Zoom = 90.0f;
 }
 
-void Camera::Reset(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
+void CCamera::Reset(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
 {
 	Position = position;
 	WorldUp = up;
@@ -79,7 +79,7 @@ void Camera::Reset(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
 	updateCameraVectors();
 }
 
-void Camera::updateCameraVectors()
+void CCamera::updateCameraVectors()
 {
 	// Calculate the new Front vector
 	glm::vec3 front;

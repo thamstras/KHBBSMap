@@ -7,7 +7,10 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
-#include "Camera.h"
+#include "Core\CoreRender.h"
+#include "Core\CShader.h"
+#include "Core\ShaderLibrary.h"
+#include "Core\CCamera.h"
 
 #include "MapLoad.h"
 #include "Render.h"

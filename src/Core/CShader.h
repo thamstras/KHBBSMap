@@ -5,13 +5,13 @@
 #include <glm/glm.hpp>
 #include <string>
 
-class Shader
+class CShader
 {
 public:
 	unsigned int ID;
 	
 	// constructor generates the shader on the fly
-	Shader(const char* vertexPath, const char* fragmentPath);
+	CShader(const char* vertexPath, const char* fragmentPath);
 
 	// activate the shader
 	void use();

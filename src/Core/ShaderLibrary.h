@@ -1,6 +1,6 @@
 #pragma once
 #include "Common.h"
-#include "Shader.h"
+#include "CShader.h"
 #include <map>
 
 struct ShaderDef
@@ -19,7 +19,7 @@ public:
 
 	bool AddShader(ShaderDef& shaderDef);
 	bool IsShaderAvailible(std::string& name);
-	std::shared_ptr<Shader> GetShader(std::string& name);
+	std::shared_ptr<CShader> GetShader(std::string& name);
 private:
-	std::map<std::string, std::shared_ptr<Shader>> m_shaderMap;
+	std::map<std::string, std::shared_ptr<CShader>> m_shaderMap;
 };

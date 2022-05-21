@@ -7,7 +7,7 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/quaternion.hpp"
 
-#include "stb_image_write.h"
+#include "Utils/stb_image_write.h"
 
 #include <filesystem>
 
@@ -109,7 +109,7 @@ void aiSceneWrapper::AddNodeToRoot(aiNode* node)
 AssimpExporter::AssimpExporter()
 {
 	uint8 pix[] = { 0xFF, 0xFF, 0xFF, 0xFF }; 
-	Texture* dummyTexture = new Texture(1, 1, pix, PF_RGBA32);
+	CTexture* dummyTexture = new CTexture(1, 1, pix, PF_RGBA32);
 	AddTexture("dummyTexture", dummyTexture);
 }
 
@@ -131,7 +131,7 @@ void AssimpExporter::BeginExport()
 	scene->mRootNode = root;
 }
 
-void AssimpExporter::AddTexture(std::string name, Texture* texture)
+void AssimpExporter::AddTexture(std::string name, CTexture* texture)
 {
 	if (textureMap.find(name) != textureMap.end()) return;
 	
@@ -312,7 +312,7 @@ void AssimpExporter::EndExport(std::string folderPath, std::string mapname)
 		scene->mMaterials.push_back(mat);
 		
 		// Step 2: Write out texture
-		Texture* tex = textureList[i];
+		CTexture* tex = textureList[i];
 		if (stbi_write_png(outPath.string().c_str(), tex->getWidth(), tex->getHeight(), 4, tex->getPixels(), tex->getWidth() * 4) == 0)
 		{
 			// TODO: error

@@ -21,7 +21,7 @@ bool ShaderLibrary::AddShader(ShaderDef& shaderDef)
 	if (IsShaderAvailible(shaderDef.shaderName))
 		return true;
 
-	auto ptr = std::make_shared<Shader>(shaderDef.vertexShaderPath.c_str(), shaderDef.fragmentShaderPath.c_str());
+	auto ptr = std::make_shared<CShader>(shaderDef.vertexShaderPath.c_str(), shaderDef.fragmentShaderPath.c_str());
 	auto res = m_shaderMap.emplace(shaderDef.shaderName, ptr);
 
 	std::cout << "[Shader Library] Added Shader " << shaderDef.shaderName << std::endl;
@@ -35,13 +35,13 @@ bool ShaderLibrary::IsShaderAvailible(std::string& name)
 	return true;
 }
 
-std::shared_ptr<Shader> ShaderLibrary::GetShader(std::string& name)
+std::shared_ptr<CShader> ShaderLibrary::GetShader(std::string& name)
 {
 	auto itr = m_shaderMap.find(name);
 	if (itr == m_shaderMap.end())
 	{
 		std::cerr << "[Shader Library] Failed to retrieve shader " << name << std::endl;
-		return std::shared_ptr<Shader>();
+		return std::shared_ptr<CShader>();
 	}
 	return (itr->second);
 }
