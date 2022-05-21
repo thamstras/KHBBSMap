@@ -11,9 +11,13 @@
 #include "Core\CShader.h"
 #include "Core\ShaderLibrary.h"
 #include "Core\CCamera.h"
+#include "Core\World.h"
 
-#include "MapLoad.h"
-#include "Render.h"
+#include "BBS\CScene.h"
+#include "BBS\CMap.h"
+
+//#include "MapLoad.h"
+//#include "Render.h"
 #include "glm/gtc/type_ptr.hpp"
 
 // #### STRUCTS ####
@@ -49,7 +53,8 @@ const bool DISABLE_MOUSELOCK = true;
 // #### GLOBALS ####
 WindowData g_window;
 MouseData g_mouse = { 0.0, 0.0, 0.0f, 0.0f, true, false };
-Camera g_camera(glm::vec3(0.0f, 1.5f, -3.0f));
+//CCamera g_camera(glm::vec3(0.0f, 1.5f, -3.0f));
+BBS::CScene* theScene;
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -171,6 +176,7 @@ bool init(FileManager& fileManager)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	//glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 	if (USE_ANTIALIASING) glfwWindowHint(GLFW_SAMPLES, 4);
 
 	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "KHBBSMap", NULL, NULL);
@@ -195,6 +201,8 @@ bool init(FileManager& fileManager)
 		return false;
 	}
 
+	//setupGLDebug();
+
 	if (GLAD_GL_EXT_texture_filter_anisotropic)
 	{
 		std::cout << "[GS] Loaded extention GL_EXT_texture_filter_anisotropic!" << std::endl;
@@ -207,7 +215,6 @@ bool init(FileManager& fileManager)
 	g_window.width = SCR_WIDTH;
 	g_window.height = SCR_HEIGHT;
 
-	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
@@ -218,14 +225,10 @@ bool init(FileManager& fileManager)
 	std::cout << "[GS] Renderer: " << renderer << std::endl;
 	std::cout << "[GS] OpenGL version: " << version << std::endl;
 
-	// uncomment this call to draw in wireframe polygons.
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	if (USE_ANTIALIASING) glEnable(GL_MULTISAMPLE);
-	//glEnable(GL_BLEND);
 	glEnable(GL_LINE_SMOOTH);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glDepthFunc(GL_LEQUAL);
@@ -253,57 +256,52 @@ bool init(FileManager& fileManager)
 
 void Render_StartFrame(RenderContext& context)
 {
-	if (context.render_no_cull)
+	if (context.render.no_cull)
 		glDisable(GL_CULL_FACE);
 	else
 		glEnable(GL_CULL_FACE);
 
-	/*if (context.render_no_blend)
-		glDisable(GL_BLEND);
-	else
-		glEnable(GL_BLEND);*/
-
-	if (context.render_wireframe)
+	if (context.render.wireframe)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	else
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-	context.render_viewMatrix = g_camera.GetViewMatrix();
-	context.render_projectionMatrix = glm::perspective(glm::radians(g_camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, context.render_nearClip, context.render_farClip);
-	context.render_skyViewMatrix = glm::mat4(glm::mat3(context.render_viewMatrix));
+	context.render.viewMatrix = g_camera.GetViewMatrix();
+	context.render.projectionMatrix = glm::perspective(glm::radians(g_camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, context.render.nearClip, context.render.farClip);
+	context.render.skyViewMatrix = glm::mat4(glm::mat3(context.render.viewMatrix));
 
-	context.stat_draw_calls = 0;
-	context.stat_objs_drawn = 0;
-	context.stat_tris_drawn = 0;
+	context.stats.draw_calls = 0;
+	context.stats.obj_drawn = 0;
+	context.stats.tris_drawn = 0;
 
 	//context.highlight_shader->use();
 	//context.highlight_shader->setVec4("color", context.debug_highlight_color);
-	std::shared_ptr<Shader> highlightShader = context.shaderLibrary->GetShader(context.highlight_shader);
+	std::shared_ptr<CShader> highlightShader = context.render.shaderLibrary->GetShader(context.render.highlight_shader);
 	highlightShader->use();
-	highlightShader->setVec4("color", context.debug_highlight_color);
+	highlightShader->setVec4("color", context.debug.highlight_color);
 
-	std::shared_ptr<Shader> standardShader = context.shaderLibrary->GetShader(context.default_shader);
+	std::shared_ptr<CShader> standardShader = context.render.shaderLibrary->GetShader(context.render.default_shader);
 	standardShader->use();
-	standardShader->setVec4("fog_color", context.fogColor);
-	if (context.render_no_fog)
+	standardShader->setVec4("fog_color", context.env.fogColor);
+	if (context.render.no_fog)
 	{
-		standardShader->setFloat("fog_near", context.render_farClip);
-		standardShader->setFloat("fog_far", context.render_farClip);
+		standardShader->setFloat("fog_near", context.render.farClip);
+		standardShader->setFloat("fog_far", context.render.farClip);
 	}
 	else
 	{
-		standardShader->setFloat("fog_near", context.fogNear);
-		standardShader->setFloat("fog_far", context.fogFar);
+		standardShader->setFloat("fog_near", context.env.fogNear);
+		standardShader->setFloat("fog_far", context.env.fogFar);
 	}
 
-	glClearColor(context.clearColor.r, context.clearColor.g, context.clearColor.b, context.clearColor.a);
+	glClearColor(context.env.clearColor.r, context.env.clearColor.g, context.env.clearColor.b, context.env.clearColor.a);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-bool gui_show_map_data = false;
-bool gui_show_data_viewer = false;
+//bool gui_show_map_data = false;
+//bool gui_show_data_viewer = false;
 bool gui_show_debug_tool = false;
-bool gui_show_object_viewer = false;
+//bool gui_show_object_viewer = false;
 
 void gui_DrawOpenFileModal()
 {
@@ -314,12 +312,12 @@ void gui_DrawOpenFileModal()
 	}
 }
 
-bool export_option = false;
+//bool export_option = false;
 
-bool export_skybox_normal = true;
-bool export_skybox_scaled = false;
+//bool export_skybox_normal = true;
+//bool export_skybox_scaled = false;
 
-void gui_DrawExportOptions(FileManager& filemanager)
+/*void gui_DrawExportOptions(FileManager& filemanager)
 {
 	if (ImGui::BeginPopupModal("ExportModal"))
 	{
@@ -357,7 +355,7 @@ void gui_DrawExportOptions(FileManager& filemanager)
 
 		ImGui::EndPopup();
 	}
-}
+}*/
 
 void gui_DrawSystemGui(FileManager& fileManager)
 {
@@ -377,10 +375,10 @@ void gui_DrawSystemGui(FileManager& fileManager)
 
 	//ImGui::Text("Our mouse   { %.2f, %.2f }", g_mouse.xPos, g_mouse.yPos);
 
-	ImGui::Checkbox("Map File", &gui_show_map_data);
-	ImGui::SameLine();
-	ImGui::Checkbox("Data View", &gui_show_data_viewer);
-	ImGui::SameLine();
+	//ImGui::Checkbox("Map File", &gui_show_map_data);
+	//ImGui::SameLine();
+	//ImGui::Checkbox("Data View", &gui_show_data_viewer);
+	//ImGui::SameLine();
 	ImGui::Checkbox("Debug Tools", &gui_show_debug_tool);
 
 	if (ImGui::Button("Metrics"))
@@ -423,63 +421,64 @@ void gui_DrawSystemGui(FileManager& fileManager)
 
 	// Modals
 	//gui_DrawOpenFileModal();
-	gui_DrawExportOptions(fileManager);
+	//gui_DrawExportOptions(fileManager);
 }
 
 void gui_DrawRenderGui(RenderContext& context)
 {
 	ImGui::Begin("Render");
-	ImGui::Checkbox("Wireframe", &context.render_wireframe);
-	ImGui::Checkbox("Disable Blend", &context.render_no_blend);
-	ImGui::Checkbox("Disable Culling", &context.render_no_cull);
-	ImGui::Checkbox("Disable Textures", &context.render_no_texture);
+	ImGui::Checkbox("Wireframe", &context.render.wireframe);
+	ImGui::Checkbox("Disable Blend", &context.render.no_blend);
+	ImGui::Checkbox("Disable Culling", &context.render.no_cull);
+	ImGui::Checkbox("Disable Textures", &context.render.no_texture);
 	ImGui::Separator();
-	ImGui::Text("Objs: %d, Tris: %d", context.stat_objs_drawn, context.stat_tris_drawn);
-	ImGui::Text("Draw Calls: %d", context.stat_draw_calls);
+	ImGui::Text("Objs: %d, Tris: %d", context.stats.obj_drawn, context.stats.tris_drawn);
+	ImGui::Text("Draw Calls: %d", context.stats.draw_calls);
 	ImGui::End();
 }
 
 void gui_DrawDebugGui(RenderContext& context)
 {
 	ImGui::Begin("Debug");
-	ImGui::Checkbox("Enable Debug", &context.debug_active);
+	ImGui::Checkbox("Enable Debug", &context.debug.active);
 	
 	ImGui::Separator();
 	
-	if (!context.debug_active)
+	if (!context.debug.active)
 	{
 		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 	}
 
-	ImGui::InputInt("object_id", (int *)&context.debug_obj_id);
-	ImGui::InputInt("section_id", (int *)&context.debug_section_id);
-	ImGui::ColorEdit4("highlight_color", glm::value_ptr(context.debug_highlight_color));
-	ImGui::Checkbox("Section only", &context.debug_section);
+	ImGui::InputInt("object_id", (int *)&context.debug.obj_id);
+	ImGui::InputInt("section_id", (int *)&context.debug.section_id);
+	ImGui::ColorEdit4("highlight_color", glm::value_ptr(context.debug.highlight_color));
+	ImGui::Checkbox("Section only", &context.debug.sectionOnly);
 	ImGui::SameLine();
-	ImGui::Checkbox("Highlight", &context.debug_highlight);
+	ImGui::Checkbox("Highlight", &context.debug.highlight);
 	ImGui::SameLine();
-	ImGui::Checkbox("Textureless", &context.debug_no_texture);
-	ImGui::Checkbox("Wireframe", &context.debug_wireframe);
-	ImGui::SameLine(); ImGui::Checkbox("Peel", &context.debug_peel);
+	ImGui::Checkbox("Textureless", &context.debug.no_texture);
+	ImGui::Checkbox("Wireframe", &context.debug.wireframe);
+	ImGui::SameLine();
+	ImGui::Checkbox("Peel", &context.debug.peel);
 
-	if (!context.debug_active)
+	if (!context.debug.active)
 	{
 		ImGui::PopStyleColor();
 	}
 
-	ImGui::Separator();
+	//ImGui::Separator();
 
-	ImGui::Checkbox("Object Viewer", &gui_show_object_viewer);
+	//ImGui::Checkbox("Object Viewer", &gui_show_object_viewer);
 
 	ImGui::End();
 
-	if (context.debug_obj_id > 2 * max_object_id())
-		context.debug_obj_id = max_object_id();
-	else if (context.debug_obj_id > max_object_id())
-		context.debug_obj_id = 0;
+	if (context.debug.obj_id > 2 * max_object_id())
+		context.debug.obj_id = max_object_id();
+	else if (context.debug.obj_id > max_object_id())
+		context.debug.obj_id = 0;
 
-	if (gui_show_object_viewer)
-		gui_object_view(context.debug_obj_id);
+	//if (gui_show_object_viewer)
+	//	gui_object_view(context.debug.obj_id);
 
 	//context.debug_active = false;
 }
@@ -490,21 +489,21 @@ void gui_DrawEnvGui(FileManager& fileManager, RenderContext& context)
 	float viewAngle = glm::radians(g_camera.Zoom);
 	ImGui::Begin("Environment");
 	
-	ImGui::ColorEdit4("Fog Color", glm::value_ptr(context.fogColor));
+	ImGui::ColorEdit4("Fog Color", glm::value_ptr(context.env.fogColor));
 	
 	ImGui::SetNextItemWidth(0.4f * ImGui::CalcItemWidth());
-	ImGui::InputFloat("Fog Near", &context.fogNear);
+	ImGui::InputFloat("Fog Near", &context.env.fogNear);
 	ImGui::SameLine();
 	ImGui::SetNextItemWidth(0.4f * ImGui::CalcItemWidth());
-	ImGui::InputFloat("Fog Far", &context.fogFar);
+	ImGui::InputFloat("Fog Far", &context.env.fogFar);
 	
 	ImGui::SetNextItemWidth(0.4f * ImGui::CalcItemWidth());
-	ImGui::InputFloat("Near Clip", &context.render_nearClip);
+	ImGui::InputFloat("Near Clip", &context.render.nearClip);
 	ImGui::SameLine();
 	ImGui::SetNextItemWidth(0.4f * ImGui::CalcItemWidth());
-	ImGui::InputFloat("Far Clip", &context.render_farClip);
+	ImGui::InputFloat("Far Clip", &context.render.farClip);
 	
-	ImGui::ColorEdit4("Clear Color", glm::value_ptr(context.clearColor));
+	ImGui::ColorEdit4("Clear Color", glm::value_ptr(context.env.clearColor));
 	
 	ImGui::SetNextItemWidth(0.4f * ImGui::CalcItemWidth());
 	if (ImGui::InputFloat("View Angle", &viewAngle))
@@ -538,17 +537,17 @@ void gui_DrawEnvGui(FileManager& fileManager, RenderContext& context)
 			std::fseek(file, 0x10, SEEK_SET);
 			glm::u8vec4 colorIn;
 			std::fread((void*)(glm::value_ptr(colorIn)), sizeof(glm::u8), 4, file);
-			context.fogColor = glm::vec4((float)colorIn.r / 255.0f, (float)colorIn.g / 255.0f, (float)colorIn.b / 255.0f, (float)colorIn.a / 255.0f);
+			context.env.fogColor = glm::vec4((float)colorIn.r / 255.0f, (float)colorIn.g / 255.0f, (float)colorIn.b / 255.0f, (float)colorIn.a / 255.0f);
 
-			std::fread((void*)(&context.fogNear), sizeof(float), 1, file);
-			std::fread((void*)(&context.fogFar), sizeof(float), 1, file);
-			std::fread((void*)(&context.render_nearClip), sizeof(float), 1, file);
-			std::fread((void*)(&context.render_farClip), sizeof(float), 1, file);
+			std::fread((void*)(&context.env.fogNear), sizeof(float), 1, file);
+			std::fread((void*)(&context.env.fogFar), sizeof(float), 1, file);
+			std::fread((void*)(&context.render.nearClip), sizeof(float), 1, file);
+			std::fread((void*)(&context.render.farClip), sizeof(float), 1, file);
 
 			// clear color
 			std::fseek(file, 0x28, SEEK_SET);
 			std::fread((void*)(glm::value_ptr(colorIn)), sizeof(glm::u8), 4, file);
-			context.clearColor = glm::vec4((float)colorIn.r / 255.0f, (float)colorIn.g / 255.0f, (float)colorIn.b / 255.0f, (float)colorIn.a / 255.0f);
+			context.env.clearColor = glm::vec4((float)colorIn.r / 255.0f, (float)colorIn.g / 255.0f, (float)colorIn.b / 255.0f, (float)colorIn.a / 255.0f);
 
 			std::fseek(file, 0x30, SEEK_SET);
 			float viewIn;
@@ -562,7 +561,7 @@ void gui_DrawEnvGui(FileManager& fileManager, RenderContext& context)
 
 void shutdown_gs()
 {
-	UnloadBBSMap();
+	//UnloadBBSMap();
 
 	std::cout << "[GS] Shutting down..." << std::endl;
 	ImGui_ImplOpenGL3_Shutdown();
@@ -602,14 +601,14 @@ void LoadNewMap(FileManager& fileManager, RenderContext renderContext)
 	std::string newFile;
 	if (fileManager.OpenFileWindow(newFile))
 	{
-		UnloadBBSMap();
-		LoadBBSMap(newFile);
-		ParseLoadedMap();
-		LoadMapTextures();
-		LoadMapObjects();
+		//UnloadBBSMap();
+		//LoadBBSMap(newFile);
+		//ParseLoadedMap();
+		//LoadMapTextures();
+		//LoadMapObjects();
 
-		renderContext.debug_obj_id = 0;
-		renderContext.debug_section_id = 0;
+		renderContext.debug.obj_id = 0;
+		renderContext.debug.section_id = 0;
 
 		g_camera.Reset(glm::vec3(0.0f, 1.5f, -3.0f));
 	}
@@ -630,64 +629,23 @@ int main(int argc, char **argv)
 
 	std::string loadPath;
 
-	RenderContext globalRenderContext;
-	globalRenderContext.render_wireframe = false;
-	globalRenderContext.render_no_blend = false;
-	globalRenderContext.render_no_cull = false;
-	globalRenderContext.render_no_texture = false;
-
-	globalRenderContext.render_nearClip = 0.1f;
-	globalRenderContext.render_farClip = 1000.0f;
-	
-	globalRenderContext.debug_active = false;
-	globalRenderContext.debug_section = false;
-	globalRenderContext.debug_obj_id = 0;
-	globalRenderContext.debug_section_id = 0;
-	globalRenderContext.debug_wireframe = false;
-	globalRenderContext.debug_highlight = false;
-	globalRenderContext.debug_no_texture = false;
-	globalRenderContext.debug_highlight_color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-	globalRenderContext.debug_peel = false;
-	
-	std::vector<ShaderDef> shaders =
-	{
-		{
-			"unlit_vcol_tex",
-			fileManager.GetShaderPath("unlit_vcol_tex.vert.glsl"),
-			fileManager.GetShaderPath("unlit_vcol_tex.frag.glsl")
-		},
-		{
-			"constant",
-			fileManager.GetShaderPath("constant.vert.glsl"),
-			fileManager.GetShaderPath("constant.frag.glsl")
-		},
-		{
-			"unlit_vcol",
-			fileManager.GetShaderPath("unlit_vcol.vert.glsl"),
-			fileManager.GetShaderPath("unlit_vcol.frag.glsl")
-		}
-	};
-
-	globalRenderContext.shaderLibrary = std::make_shared<ShaderLibrary>(shaders);
-	globalRenderContext.default_shader = "unlit_vcol_tex";
-	globalRenderContext.highlight_shader = "constant";
-	globalRenderContext.textureless_shader = "unlit_vcol";
-
-	globalRenderContext.render_no_fog = false;
-	globalRenderContext.fogColor = glm::vec4(1.0f);
-	globalRenderContext.fogNear = 1000.0f;
-	globalRenderContext.fogFar = 1000.0f;
-	globalRenderContext.clearColor = glm::vec4(0.2f, 0.3f, 0.3f, 1.0f);
+	BBS::CScene* scene = new BBS::CScene();
+	scene->Init();
 
 	if (!fileManager.OpenFileWindow(loadPath))
 	{
 		return 0;
 	}
 
-	LoadBBSMap(loadPath);
-	ParseLoadedMap();
-	LoadMapTextures();
-	LoadMapObjects();
+	//LoadBBSMap(loadPath);
+	//ParseLoadedMap();
+	//LoadMapTextures();
+	//LoadMapObjects();
+
+	// TODO: CScene::OpenMap(...);
+	BBS::CMap *map = new BBS::CMap();
+	map->LoadMapFile(loadPath);
+	scene->theMap = map;
 
 	gui_endSplash();
 
@@ -699,8 +657,8 @@ int main(int argc, char **argv)
 		lastFrame = currentFrame;
 		g_worldTime += deltaTime;
 
-		globalRenderContext.frame_deltaTime = deltaTime;
-		globalRenderContext.frame_worldTime = g_worldTime;
+		//globalRenderContext.frame_deltaTime = deltaTime;
+		//globalRenderContext.frame_worldTime = g_worldTime;
 
 		// Start the Dear ImGui frame
 		ImGui_ImplOpenGL3_NewFrame();
@@ -709,16 +667,19 @@ int main(int argc, char **argv)
 
 		processInput(g_window.window);
 
-		Render_StartFrame(globalRenderContext);
+		//Render_StartFrame(globalRenderContext);
 		
-		RenderBBSMap(globalRenderContext);
+		//RenderBBSMap(globalRenderContext);
+		scene->Tick(deltaTime, g_worldTime);
+
+		scene->Draw();
 
 		gui_DrawSystemGui(fileManager);
 
-		if (gui_show_map_data) gui_MapData();
-		if (gui_show_data_viewer) gui_loaded_data();
+		//if (gui_show_map_data) gui_MapData();
+		//if (gui_show_data_viewer) gui_loaded_data();
 		if (gui_show_debug_tool) gui_DrawDebugGui(globalRenderContext);
-		gui_tex_view();
+		//gui_tex_view();
 
 		gui_DrawRenderGui(globalRenderContext);
 		gui_DrawEnvGui(fileManager, globalRenderContext);
