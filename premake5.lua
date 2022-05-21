@@ -11,7 +11,7 @@ ASSIMP_PATH = "C:/Repos/Libraries/assimp/5.0.1/"
 workspace "KHBBSMap" 
     configurations {"Debug", "Release"} 
     platforms {"Win32"} 
-    location "build"
+    --location "build"
 
     project "KHBBSMap"
         kind "ConsoleApp"
@@ -20,12 +20,15 @@ workspace "KHBBSMap"
         system "Windows" 
         architecture "x32"
 		vpaths {
-			["Source/*"] = { "src/**.h", "src/**.c", "src/**.hpp", "src/**.cpp"},
+			["Source/*"] = { "src/**.h", "src/**.c", "src/**.hpp", "src/**.cpp" },
             ["Shaders"] = { "**.glsl", "**.vert", "**.frag" },
-            ["glad/*"] = { "glad"},
+            ["glad/*"] = { "glad" },
+			["IMGUI/*"] = { "imgui/**.h", "imgui/**.cpp" }
 		}
-		files { "src/**", "resources/shaders/**" }
+		files { "src/**", "resources/shaders/**", "imgui/**" }
+		includedirs({"./src", "./imgui"})
         flags {"NoPCH"}  -- TODO: Check to see if more flags are needed.
+		buildoptions { "/Zc:__cplusplus" }
         --targetdir "bin"
         --debugdir "./" -- TODO: This doesn't give the right results and the .user file overrides it once generated.
                         --       Also, now rendered irrelevent by the new FileManager search functionality.
