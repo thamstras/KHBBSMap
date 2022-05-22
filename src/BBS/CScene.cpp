@@ -3,9 +3,10 @@
 
 using namespace BBS;
 
-void CScene::Init()
+void CScene::Init(FileManager& fileManager)
 {
 	camera.Reset();
+	renderContext.render.current_camera = &camera;
 	renderContext.render.wireframe = false;
 	renderContext.render.no_blend = false;
 	renderContext.render.no_cull = false;
@@ -64,6 +65,7 @@ void CScene::Tick(float deltaTime, double worldTime)
 {
 	worldContext.deltaTime = deltaTime;
 	worldContext.worldTime = worldTime;
+	StartFrame();
 
 	theMap->Update(worldContext);
 
@@ -72,8 +74,6 @@ void CScene::Tick(float deltaTime, double worldTime)
 
 void CScene::Draw()
 {
-	StartFrame();
-
 	glDisable(GL_DEPTH_TEST);
 	renderContext.render.currentPass = LAYER_SKY;
 	for (CRenderObject* renderObject : renderContext.render.skyDrawList)
@@ -127,6 +127,11 @@ void CScene::ProcessKeyboard(GLFWwindow* window)
 void CScene::ProcessMouse(float deltaX, float deltaY)
 {
 	camera.ProcessMouseMovement(deltaX, deltaY);
+}
+
+void CScene::ProcessMouseScroll(double amount)
+{
+	camera.ProcessMouseScroll(amount);
 }
 
 void CScene::StartFrame()

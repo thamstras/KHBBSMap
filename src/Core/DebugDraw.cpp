@@ -45,7 +45,7 @@ GLuint CDebugCube::VAO = 0;
 void DebugDraw::DebugCube(RenderContext& context, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale, glm::vec3 color)
 {
 	CDebugCube* cube = new CDebugCube(position, rotation, scale, color, 0.0f);
-	context.render.dynamicDrawList.push_back(cube);
+	context.render.overlayDrawList.push_back(cube);
 	DebugDraw::AddDebugObject(cube);
 }
 
@@ -90,7 +90,7 @@ void CDebugCube::DoDraw(RenderContext& context)
 		
 		glGenBuffers(1, &VBO);
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, 12 * 3 * sizeof(float), debug_cube_verts, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, 24 * 3 * sizeof(float), debug_cube_verts, GL_STATIC_DRAW);
 		
 		glEnableVertexAttribArray(0);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
@@ -107,7 +107,8 @@ void CDebugCube::DoDraw(RenderContext& context)
 	model = glm::rotate(model, glm::angle(rot), glm::axis(rot));
 	model = glm::scale(model, this->scale / 2.0f);	// Cube verts define a 'radius' 2 cube, so 1/2 the scale.
 	
-	std::shared_ptr<CShader> shader = context.render.shaderLibrary->GetShader("debugShader"s);
+	std::shared_ptr<CShader> shader = context.render.shaderLibrary->GetShader("constant"s);
+	shader->use();
 	shader->setMat4("model"s, model);
 	shader->setMat4("view"s, context.render.viewMatrix);
 	shader->setMat4("projection"s, context.render.projectionMatrix);

@@ -9,6 +9,7 @@
 #include "..\Utils\Math.h"
 #include <math.h>
 #include "..\Core\CCamera.h"
+#include "Core\DebugDraw.h"
 
 using namespace BBS;
 
@@ -22,8 +23,7 @@ void CMap::LoadMapFile(std::string filePath)
 		return;
 	}
 
-	PmpFile pmpFile;
-	pmpFile.ReadPmpFile(fileStream);
+	PmpFile pmpFile = PmpFile::ReadPmpFile(fileStream);
 	std::cout << "[MAP] Loaded PMP: " << filePath << std::endl;
 
 	this->instances.reserve(pmpFile.header.instance_count);
@@ -35,10 +35,15 @@ void CMap::LoadMapFile(std::string filePath)
 	{
 		if (inst.offset != 0)
 		{
-			if (this->objects[inst.model_idx] == nullptr)
+			if (inst.model_idx > objects.size())
 			{
-				this->objects[inst.model_idx] = new CModelObject();
-				this->objects[inst.model_idx]->LoadPmo(inst.data, false);
+				std::cout << "[MAP] Objects vector resized from " << objects.size() << " to " << inst.model_idx << std::endl;
+				objects.resize(inst.model_idx);
+			}
+			if (this->objects[inst.model_idx - 1] == nullptr)
+			{
+				this->objects[inst.model_idx - 1] = new CModelObject();
+				this->objects[inst.model_idx - 1]->LoadPmo(inst.data, false);
 			}
 		}
 
@@ -53,6 +58,7 @@ void CMap::LoadMapFile(std::string filePath)
 	{
 		CTextureObject* texObj = new CTextureObject();
 		texObj->LoadTM2(tex.data);
+		texObj->CreateTexture();
 		CTextureInfo* mapTexture = new CTextureInfo(this, tex, texObj);
 		this->textures.insert(std::make_pair(mapTexture->name, mapTexture));
 	}
@@ -94,7 +100,8 @@ void CMap::Update(WorldContext& context)
 
 	for (auto model : objects)
 	{
-		model->UpdateTextureOffsets();
+		if (model != nullptr) 
+			model->UpdateTextureOffsets();
 	}
 
 	for (auto instance : instances)
@@ -107,12 +114,25 @@ void CMap::Update(WorldContext& context)
 		}
 		else
 		{
-			if (instance->BBox(context.render->render.current_camera, context.render->render.projectionMatrix))
-			{
-				context.render->render.staticDrawList.push_back(instance);
+			//glm::vec4 min = glm::vec4(FLT_MAX);
+			//glm::vec4 max = glm::vec4(-FLT_MAX);
+			//for (auto& vert : instance->model->bbox)
+			//{
+			//	min = glm::min(min, vert);
+			//	max = glm::max(max, vert);
+			//}
+			//
+			//AABBox bbox = AABBox(glm::vec3(min), glm::vec3(max));
+			//bbox = AABBox::Translate(bbox, instance->position);
+			//DebugDraw::DebugCube(*context.render, bbox.center(), instance->rotation, bbox.halfExtents() * 2.0f * instance->scale, glm::vec3(1.0, 0.0, 0.0));
+
+			//if (instance->BBox(context.render->render.current_camera, context.render->render.projectionMatrix))
+			//{
+				if (instance->model->mesh0 != nullptr)
+					context.render->render.staticDrawList.push_back(instance);
 				if (instance->model->mesh1 != nullptr)
 					context.render->render.dynamicDrawList.push_back(instance);
-			}
+			//}
 		}
 	}
 
@@ -141,7 +161,7 @@ CMapInstance::CMapInstance(CMap* map, PmpInstance& inst)
 	this->objectID = inst.model_idx;
 	this->flags = inst.flags;
 
-	this->model = this->parent->objects[this->objectID];
+	this->model = this->parent->objects[this->objectID - 1];
 }
 
 void CMapInstance::DoDraw(RenderContext& render)
@@ -163,6 +183,8 @@ void CMapInstance::Update(float deltaTime, double worldTime)
 
 bool CMapInstance::BBox(CCamera* cam, glm::mat4 projMatrix)
 {
+	return true;
+	
 	glm::vec4 min = glm::vec4(FLT_MAX);
 	glm::vec4 max = glm::vec4(-FLT_MAX);
 	for (auto& vert : this->model->bbox)
@@ -180,7 +202,14 @@ bool CMapInstance::BBox(CCamera* cam, glm::mat4 projMatrix)
 
 CTextureObject::CTextureObject()
 {
-
+	texture = nullptr;
+	clutType = CLT_TYPE::CT_NONE;
+	clutCount = 0;
+	imageType = IMG_TYPE::IT_RGBA;
+	imageWidth = 0;
+	imageHeight = 0;
+	textureWidth = 0;
+	textureHeight = 0;
 }
 
 CTextureObject::~CTextureObject()
@@ -217,7 +246,7 @@ void CTextureObject::CreateTexture()
 	uint32 psWidth = textureWidth;
 	uint32 psHeight = textureHeight;
 
-	std::vector<uint8> decodedData = std::vector<uint8>(4 * width * height);
+	std::vector<uint8> decodedData = std::vector<uint8>();
 
 	uint8* pixelData = image.data();
 	int pixelPtr = 0;
@@ -239,6 +268,7 @@ void CTextureObject::CreateTexture()
 			case IT_CLUT4:	// 4 bit CLUT => 2 pixels per byte
 				pixelIndex0 &= 0x0F;
 				pixelIndex1 = (pixelIndex1 >> 4) & 0x0F;
+				pixelPtr++;
 				break;
 			case IT_CLUT8:	// 8 bit CLUT
 				if ((pixelIndex0 & 31) >= 8)
@@ -252,6 +282,7 @@ void CTextureObject::CreateTexture()
 						pixelIndex0 -= 8;				// +16 - 23 to +8 - 15
 					}
 				}
+				pixelPtr++;
 				break;
 			default:
 				// TODO: Error
@@ -303,26 +334,26 @@ void CTextureObject::CreateTexture()
 				{
 					// NOTE: No CT_NONE, as imageType == IT_CLUT4 && clutType == CT_NONE would be invalid
 				case CT_A1BGR5:
-					pixelIndex0 *= 2;
-					temp16 = clutData[pixelIndex0 + 0] | (clutData[pixelIndex0 + 1] << 8);
+					pixelIndex1 *= 2;
+					temp16 = clutData[pixelIndex1 + 0] | (clutData[pixelIndex1 + 1] << 8);
 					decodedData.push_back((temp16 & 0x1F) * (1.0 / 31.0 * 255.0));
 					decodedData.push_back(((temp16 >> 5) & 0x1F) * (1.0 / 31.0 * 255.0));
 					decodedData.push_back(((temp16 >> 10) & 0x1F) * (1.0 / 31.0 * 255.0));
 					decodedData.push_back((temp16 & 0x8000) ? (0xFF) : (0));
 					break;
 				case CT_XBGR8:
-					pixelIndex0 *= 3;
-					decodedData.push_back(clutData[pixelIndex0 + 0]);
-					decodedData.push_back(clutData[pixelIndex0 + 1]);
-					decodedData.push_back(clutData[pixelIndex0 + 2]);
+					pixelIndex1 *= 3;
+					decodedData.push_back(clutData[pixelIndex1 + 0]);
+					decodedData.push_back(clutData[pixelIndex1 + 1]);
+					decodedData.push_back(clutData[pixelIndex1 + 2]);
 					decodedData.push_back(0xFF);
 					break;
 				case CT_ABGR8:
-					pixelIndex0 *= 4;
-					decodedData.push_back(clutData[pixelIndex0 + 0]);
-					decodedData.push_back(clutData[pixelIndex0 + 1]);
-					decodedData.push_back(clutData[pixelIndex0 + 2]);
-					decodedData.push_back(clutData[pixelIndex0 + 3]);
+					pixelIndex1 *= 4;
+					decodedData.push_back(clutData[pixelIndex1 + 0]);
+					decodedData.push_back(clutData[pixelIndex1 + 1]);
+					decodedData.push_back(clutData[pixelIndex1 + 2]);
+					decodedData.push_back(clutData[pixelIndex1 + 3]);
 					break;
 				default:
 					// TODO: Error
@@ -331,7 +362,8 @@ void CTextureObject::CreateTexture()
 			}
 		}
 
-		for (int p = 0; p < rem; p++) decodedData.push_back(0);
+		for (int p = 0; p < rem; p++)
+			decodedData.push_back(0);
 	}
 
 	texture = new CTexture(textureWidth, textureHeight, decodedData.data(), PF_RGBA32);
@@ -344,6 +376,7 @@ CTextureInfo::CTextureInfo(CMap* map, PmpTexEntry& texInfo, CTextureObject* texO
 	name = std::string(texInfo.name, 12);
 	scrollSpeed_x = texInfo.scrollX;
 	scrollSpeed_y = texInfo.scrollY;
+	currentScroll = glm::vec2(0.0f);
 }
 
 CTextureInfo::~CTextureInfo()
@@ -364,7 +397,11 @@ void CTextureInfo::Update(float deltaTime, double worldTime)
 
 CModelObject::CModelObject()
 {
-
+	scale = 0.0f;
+	for (int i = 0; i < 8; i++) bbox[i] = glm::vec4(0.0f);
+	ownsTextures = false;
+	mesh0 = nullptr;
+	mesh1 = nullptr;
 }
 
 CModelObject::~CModelObject()
@@ -413,7 +450,7 @@ void CModelObject::LoadPmo(PmoFile& pmo, bool loadTextures)
 
 	if (pmo.hasMesh1())
 	{
-		for (PmoMesh& mesh : pmo.mesh0)
+		for (PmoMesh& mesh : pmo.mesh1)
 		{
 			CModelSection* section = new CModelSection();
 			section->LoadSection(mesh);
@@ -421,6 +458,7 @@ void CModelObject::LoadPmo(PmoFile& pmo, bool loadTextures)
 		}
 	}
 	
+	ownsTextures = loadTextures;
 	for (PmoTexture& tex : pmo.textures)
 	{
 		this->textureNames.push_back(std::string(tex.resourceName, 12));
@@ -458,6 +496,9 @@ CMesh* CModelObject::BuildMesh(std::vector<CModelSection*>& sections)
 		CMeshSection meshSection;
 		meshSection.vertCount = modelSection->vertexCount;
 		meshSection.textureIndex = modelSection->textureIndex;
+		meshSection.stride = (10 * sizeof(float));
+		meshSection.twoSided = modelSection->attributes & ATTR_BACK;
+		meshSection.blend = modelSection->attributes & ATTR_BLEND_MASK;
 		for each (uint16 kick in modelSection->primCount)
 		{
 			meshSection.kickList.push_back((unsigned int)kick);
@@ -510,12 +551,14 @@ CMesh* CModelObject::BuildMesh(std::vector<CModelSection*>& sections)
 				mesh->vertData.push_back(modelSection->vertexData[rp++]);
 				mesh->vertData.push_back(modelSection->vertexData[rp++]);
 				mesh->vertData.push_back(modelSection->vertexData[rp++]);
+				mesh->vertData.push_back(1.0f);
 			}
 			else
 			{
 				mesh->vertData.push_back(0.0f);
 				mesh->vertData.push_back(0.0f);
 				mesh->vertData.push_back(0.0f);
+				mesh->vertData.push_back(1.0f);
 			}
 		}
 
@@ -540,7 +583,7 @@ void CModelObject::BuildMesh()
 	if (mesh1 != nullptr) mesh1->textures = textureList;
 }
 
-void CModelObject::DoDraw(RenderContext& render, glm::vec3 pos, glm::vec3 rot, glm::vec3 scale)
+void CModelObject::DoDraw(RenderContext& render, const glm::vec3& pos, const glm::vec3& rot, const glm::vec3& scale)
 {
 	ERenderLayer pass = render.render.currentPass;
 	if (pass == LAYER_SKY)
@@ -558,7 +601,7 @@ void CModelObject::DoDraw(RenderContext& render, glm::vec3 pos, glm::vec3 rot, g
 	}
 }
 
-VertexFlags Merge(const VertexFlags& a, const VertexFlags& b)
+VertexFlags BBS::Merge(const VertexFlags& a, const VertexFlags& b)
 {
 	VertexFlags c{};
 	c.hasWeights = (a.hasWeights | b.hasWeights);
@@ -571,7 +614,12 @@ VertexFlags Merge(const VertexFlags& a, const VertexFlags& b)
 
 CModelSection::CModelSection()
 {
-
+	textureIndex = 0;
+	vertexCount = 0;
+	primativeType = GL_TRIANGLES;
+	flags = { 0 };
+	attributes = 0;
+	globalColor = 0xFF808080;
 }
 
 void CModelSection::LoadSection(PmoMesh& mesh)
@@ -646,16 +694,16 @@ void CModelSection::LoadSection(PmoMesh& mesh)
 			break;
 		case 2:	// uint16
 			readPtr += ((0x2 - ((readPtr - 0) & 0x1)) & 0x1);
-			temp16[0] = pVertStart[readPtr++] | (pVertStart[readPtr++] << 8);
-			temp16[1] = pVertStart[readPtr++] | (pVertStart[readPtr++] << 8);
+			temp16[0] = (pVertStart[readPtr++] << 0) | (pVertStart[readPtr++] << 8);
+			temp16[1] = (pVertStart[readPtr++] << 0) | (pVertStart[readPtr++] << 8);
 			vertexData.push_back((float)temp16[0] / 32767.0f);
 			vertexData.push_back((float)temp16[1] / 32767.0f);
 			break;
 		case 3: // float
 			readPtr += ((0x4 - ((readPtr - 0) & 0x3)) & 0x3);
-			temp32[0] = pVertStart[readPtr++] | (pVertStart[readPtr++] << 8)
+			temp32[0] = (pVertStart[readPtr++] << 0) | (pVertStart[readPtr++] << 8)
 				| (pVertStart[readPtr++] << 16) | (pVertStart[readPtr++] << 24);
-			temp32[1] = pVertStart[readPtr++] | (pVertStart[readPtr++] << 8)
+			temp32[1] = (pVertStart[readPtr++] << 0) | (pVertStart[readPtr++] << 8)
 				| (pVertStart[readPtr++] << 16) | (pVertStart[readPtr++] << 24);
 			vertexData.push_back(bit_cast<float, uint32>(temp32[0]));
 			vertexData.push_back(bit_cast<float, uint32>(temp32[1]));
@@ -667,28 +715,31 @@ void CModelSection::LoadSection(PmoMesh& mesh)
 		case 0: // none
 			break;
 		case 4: // BRG-5650
-			temp16[0] = pVertStart[readPtr++] | (pVertStart[readPtr++] << 8);
+			readPtr += ((0x2 - ((readPtr - 0) & 0x1)) & 0x1);
+			temp16[0] = (pVertStart[readPtr++] << 0) | (pVertStart[readPtr++] << 8);
 			vertexData.push_back(((float)((temp16[0] & 0xF800) >> 11) / 31.f) * 255.f);
 			vertexData.push_back(((float)((temp16[0] & 0x07E0) >>  5) / 63.f) * 255.f);
 			vertexData.push_back(((float)((temp16[0] & 0x001F) >>  0) / 31.f) * 255.f);
 			vertexData.push_back(0xFF);
 			break;
 		case 5: // ABGR-5551
-			temp16[0] = pVertStart[readPtr++] | (pVertStart[readPtr++] << 8);
+			readPtr += ((0x2 - ((readPtr - 0) & 0x1)) & 0x1);
+			temp16[0] = (pVertStart[readPtr++] << 0) | (pVertStart[readPtr++] << 8);
 			vertexData.push_back(((float)((temp16[0] & 0xF800) >> 11) / 31.f) * 255.f);
 			vertexData.push_back(((float)((temp16[0] & 0x07C0) >>  6) / 31.f) * 255.f);
 			vertexData.push_back(((float)((temp16[0] & 0x003E) >>  1) / 31.f) * 255.f);
 			vertexData.push_back((temp16[0] & 0x8000) ? (0xFF) : (0));
 			break;
 		case 6: // ABGR-4444
-			temp16[0] = pVertStart[readPtr++] | (pVertStart[readPtr++] << 8);
+			readPtr += ((0x2 - ((readPtr - 0) & 0x1)) & 0x1);
+			temp16[0] = (pVertStart[readPtr++] << 0) | (pVertStart[readPtr++] << 8);
 			vertexData.push_back(((float)((temp16[0] & 0xF000) >> 12) / 15.f) * 255.f);
 			vertexData.push_back(((float)((temp16[0] & 0x0F00) >>  8) / 15.f) * 255.f);
 			vertexData.push_back(((float)((temp16[0] & 0x00F0) >>  4) / 15.f) * 255.f);
 			vertexData.push_back(((float)((temp16[0] & 0x000F) >>  0) / 15.f) * 255.f);
 			break;
 		case 7: // ABGR-8888
-			// TODO: Check color alignment
+			readPtr += ((0x4 - ((readPtr - 0) & 0x3)) & 0x3);
 			temp8[0] = pVertStart[readPtr++];
 			temp8[1] = pVertStart[readPtr++];
 			temp8[2] = pVertStart[readPtr++];
@@ -715,20 +766,20 @@ void CModelSection::LoadSection(PmoMesh& mesh)
 			break;
 		case 2:
 			readPtr += ((0x2 - ((readPtr - 0) & 0x1)) & 0x1);
-			temp16[0] = pVertStart[readPtr++] | (pVertStart[readPtr++] << 8);
-			temp16[1] = pVertStart[readPtr++] | (pVertStart[readPtr++] << 8);
-			temp16[2] = pVertStart[readPtr++] | (pVertStart[readPtr++] << 8);
+			temp16[0] = (pVertStart[readPtr++] << 0) | (pVertStart[readPtr++] << 8);
+			temp16[1] = (pVertStart[readPtr++] << 0) | (pVertStart[readPtr++] << 8);
+			temp16[2] = (pVertStart[readPtr++] << 0) | (pVertStart[readPtr++] << 8);
 			vertexData.push_back((float)bit_cast<int16, uint16>(temp16[0]) / 32767.0f);
 			vertexData.push_back((float)bit_cast<int16, uint16>(temp16[1]) / 32767.0f);
 			vertexData.push_back((float)bit_cast<int16, uint16>(temp16[2]) / 32767.0f);
 			break;
 		case 3:
 			readPtr += ((0x4 - ((readPtr - 0) & 0x3)) & 0x3);
-			temp32[0] = pVertStart[readPtr++] | (pVertStart[readPtr++] << 8)
+			temp32[0] = (pVertStart[readPtr++] << 0) | (pVertStart[readPtr++] << 8)
 				| (pVertStart[readPtr++] << 16) | (pVertStart[readPtr++] << 24);
-			temp32[1] = pVertStart[readPtr++] | (pVertStart[readPtr++] << 8)
+			temp32[1] = (pVertStart[readPtr++] << 0) | (pVertStart[readPtr++] << 8)
 				| (pVertStart[readPtr++] << 16) | (pVertStart[readPtr++] << 24);
-			temp32[2] = pVertStart[readPtr++] | (pVertStart[readPtr++] << 8)
+			temp32[2] = (pVertStart[readPtr++] << 0) | (pVertStart[readPtr++] << 8)
 				| (pVertStart[readPtr++] << 16) | (pVertStart[readPtr++] << 24);
 			vertexData.push_back(bit_cast<float, uint32>(temp32[0]));
 			vertexData.push_back(bit_cast<float, uint32>(temp32[1]));

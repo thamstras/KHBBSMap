@@ -143,7 +143,8 @@ PmoFile PmoFile::ReadPmoFile(std::ifstream& file, std::streamoff base)
     pmo.header = ParsePmoHeader(file);
     if (pmo.header.textureCount != 0)
     {
-        pmo.textures.push_back(ParsePmoTexture(file));
+        for (int i = 0; i < pmo.header.textureCount; i++)
+            pmo.textures.push_back(ParsePmoTexture(file));
     }
     if (pmo.header.mesh0Offset != 0)
     {

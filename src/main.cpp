@@ -16,8 +16,6 @@
 #include "BBS\CScene.h"
 #include "BBS\CMap.h"
 
-//#include "MapLoad.h"
-//#include "Render.h"
 #include "glm/gtc/type_ptr.hpp"
 
 // #### STRUCTS ####
@@ -53,7 +51,6 @@ const bool DISABLE_MOUSELOCK = true;
 // #### GLOBALS ####
 WindowData g_window;
 MouseData g_mouse = { 0.0, 0.0, 0.0f, 0.0f, true, false };
-//CCamera g_camera(glm::vec3(0.0f, 1.5f, -3.0f));
 BBS::CScene* theScene;
 
 float deltaTime = 0.0f;
@@ -113,15 +110,14 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	}
 
 	if (g_window.hasCursorLock)
-		g_camera.ProcessMouseMovement(g_mouse.deltaX, g_mouse.deltaY);
+		theScene->ProcessMouse(g_mouse.deltaX, g_mouse.deltaY);
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-	/*if (g_window.hasCursorLock)*/ 
 	if (!ImGui::GetIO().WantCaptureMouse)
 	{
-		g_camera.ProcessMouseScroll(yoffset);
+		theScene->ProcessMouseScroll(yoffset);
 	}
 }
 
@@ -150,19 +146,7 @@ void processInput(GLFWwindow *window)
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		g_camera.ProcessKeyboard(FORWARD, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		g_camera.ProcessKeyboard(BACKWARD, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		g_camera.ProcessKeyboard(LEFT, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		g_camera.ProcessKeyboard(RIGHT, deltaTime);
-
-	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-		g_camera.MovementMultiplier = 2.0f;
-	else
-		g_camera.MovementMultiplier = 1.0f;
+	theScene->ProcessKeyboard(window);
 }
 
 // #### FUNCTIONS
@@ -254,50 +238,6 @@ bool init(FileManager& fileManager)
 	return true;
 }
 
-void Render_StartFrame(RenderContext& context)
-{
-	if (context.render.no_cull)
-		glDisable(GL_CULL_FACE);
-	else
-		glEnable(GL_CULL_FACE);
-
-	if (context.render.wireframe)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	else
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-	context.render.viewMatrix = g_camera.GetViewMatrix();
-	context.render.projectionMatrix = glm::perspective(glm::radians(g_camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, context.render.nearClip, context.render.farClip);
-	context.render.skyViewMatrix = glm::mat4(glm::mat3(context.render.viewMatrix));
-
-	context.stats.draw_calls = 0;
-	context.stats.obj_drawn = 0;
-	context.stats.tris_drawn = 0;
-
-	//context.highlight_shader->use();
-	//context.highlight_shader->setVec4("color", context.debug_highlight_color);
-	std::shared_ptr<CShader> highlightShader = context.render.shaderLibrary->GetShader(context.render.highlight_shader);
-	highlightShader->use();
-	highlightShader->setVec4("color", context.debug.highlight_color);
-
-	std::shared_ptr<CShader> standardShader = context.render.shaderLibrary->GetShader(context.render.default_shader);
-	standardShader->use();
-	standardShader->setVec4("fog_color", context.env.fogColor);
-	if (context.render.no_fog)
-	{
-		standardShader->setFloat("fog_near", context.render.farClip);
-		standardShader->setFloat("fog_far", context.render.farClip);
-	}
-	else
-	{
-		standardShader->setFloat("fog_near", context.env.fogNear);
-		standardShader->setFloat("fog_far", context.env.fogFar);
-	}
-
-	glClearColor(context.env.clearColor.r, context.env.clearColor.g, context.env.clearColor.b, context.env.clearColor.a);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-}
-
 //bool gui_show_map_data = false;
 //bool gui_show_data_viewer = false;
 bool gui_show_debug_tool = false;
@@ -364,10 +304,11 @@ void gui_DrawSystemGui(FileManager& fileManager)
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 	//ImGui::Text("Wall time: 0.0s Game time: %.3fs", g_worldTime);
 
+	CCamera* camera = &theScene->camera;
 	ImGui::TextColored(ImVec4(0, 0.75f, 0.1125f, 1.0f), "Camera");
 	ImGui::Text("Pos { %.2f, %.2f, %.2f } Pitch %.2f Yaw %.2f",
-		g_camera.Position.x, g_camera.Position.y, g_camera.Position.z,
-		g_camera.Pitch, g_camera.Yaw);
+		camera->Position.x, camera->Position.y, camera->Position.z,
+		camera->Pitch, camera->Yaw);
 	if (g_window.hasCursorLock)
 		ImGui::TextColored(ImVec4(0, 0.75f, 0.1125f, 1.0f), "Focused");
 	else
@@ -472,9 +413,10 @@ void gui_DrawDebugGui(RenderContext& context)
 
 	ImGui::End();
 
-	if (context.debug.obj_id > 2 * max_object_id())
-		context.debug.obj_id = max_object_id();
-	else if (context.debug.obj_id > max_object_id())
+	unsigned int max_object_id = theScene->theMap->instances.size();
+	if (context.debug.obj_id > max_object_id)
+		context.debug.obj_id = max_object_id;
+	else if (context.debug.obj_id > max_object_id)
 		context.debug.obj_id = 0;
 
 	//if (gui_show_object_viewer)
@@ -486,7 +428,7 @@ void gui_DrawDebugGui(RenderContext& context)
 void gui_DrawEnvGui(FileManager& fileManager, RenderContext& context)
 {
 	bool loadPVD = false;
-	float viewAngle = glm::radians(g_camera.Zoom);
+	float viewAngle = glm::radians(theScene->camera.Zoom);
 	ImGui::Begin("Environment");
 	
 	ImGui::ColorEdit4("Fog Color", glm::value_ptr(context.env.fogColor));
@@ -508,7 +450,7 @@ void gui_DrawEnvGui(FileManager& fileManager, RenderContext& context)
 	ImGui::SetNextItemWidth(0.4f * ImGui::CalcItemWidth());
 	if (ImGui::InputFloat("View Angle", &viewAngle))
 	{
-		g_camera.Zoom = glm::degrees(viewAngle);
+		theScene->camera.Zoom = glm::degrees(viewAngle);
 	}
 	
 	if (ImGui::Button("Load Env (PVD)"))
@@ -552,7 +494,7 @@ void gui_DrawEnvGui(FileManager& fileManager, RenderContext& context)
 			std::fseek(file, 0x30, SEEK_SET);
 			float viewIn;
 			std::fread((void*)(&viewIn), sizeof(float), 1, file);
-			g_camera.Zoom = glm::degrees(viewIn);
+			theScene->camera.Zoom = glm::degrees(viewIn);
 
 			std::fclose(file);
 		}
@@ -606,11 +548,13 @@ void LoadNewMap(FileManager& fileManager, RenderContext renderContext)
 		//ParseLoadedMap();
 		//LoadMapTextures();
 		//LoadMapObjects();
+		theScene->theMap->Clear();
+		theScene->theMap->LoadMapFile(newFile);
 
 		renderContext.debug.obj_id = 0;
 		renderContext.debug.section_id = 0;
 
-		g_camera.Reset(glm::vec3(0.0f, 1.5f, -3.0f));
+		theScene->camera.Reset(glm::vec3(0.0f, 1.5f, -3.0f));
 	}
 }
 
@@ -629,8 +573,16 @@ int main(int argc, char **argv)
 
 	std::string loadPath;
 
-	BBS::CScene* scene = new BBS::CScene();
-	scene->Init();
+	theScene = new BBS::CScene();
+	try
+	{
+		theScene->Init(fileManager);
+	}
+	catch (const std::runtime_error& e)
+	{
+		std::cerr << "RUNTIME: " << e.what() << std::endl;
+		terminate();
+	}
 
 	if (!fileManager.OpenFileWindow(loadPath))
 	{
@@ -645,7 +597,7 @@ int main(int argc, char **argv)
 	// TODO: CScene::OpenMap(...);
 	BBS::CMap *map = new BBS::CMap();
 	map->LoadMapFile(loadPath);
-	scene->theMap = map;
+	theScene->theMap = map;
 
 	gui_endSplash();
 
@@ -670,19 +622,19 @@ int main(int argc, char **argv)
 		//Render_StartFrame(globalRenderContext);
 		
 		//RenderBBSMap(globalRenderContext);
-		scene->Tick(deltaTime, g_worldTime);
+		theScene->Tick(deltaTime, g_worldTime);
 
-		scene->Draw();
+		theScene->Draw();
 
 		gui_DrawSystemGui(fileManager);
 
 		//if (gui_show_map_data) gui_MapData();
 		//if (gui_show_data_viewer) gui_loaded_data();
-		if (gui_show_debug_tool) gui_DrawDebugGui(globalRenderContext);
+		if (gui_show_debug_tool) gui_DrawDebugGui(theScene->renderContext);
 		//gui_tex_view();
 
-		gui_DrawRenderGui(globalRenderContext);
-		gui_DrawEnvGui(fileManager, globalRenderContext);
+		gui_DrawRenderGui(theScene->renderContext);
+		gui_DrawEnvGui(fileManager, theScene->renderContext);
 
 		//ImGui::ShowDemoWindow();
 
@@ -695,7 +647,7 @@ int main(int argc, char **argv)
 		if (g_loadNewMap)
 		{
 			g_loadNewMap = false;
-			LoadNewMap(fileManager, globalRenderContext);
+			LoadNewMap(fileManager, theScene->renderContext);
 		}
 
 	}

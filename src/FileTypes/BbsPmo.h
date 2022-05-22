@@ -107,6 +107,33 @@ struct PmoVertexFormatFlags
 
 };
 
+enum PMO_MESH_ATTR
+{
+    ATTR_BLEND_NONE = 0x0,
+    ATTR_NOMATERIAL = 0x1,
+    ATTR_GLARE = 0x2,
+    ATTR_BACK = 0x4,
+    ATTR_DIVIDE = 0x8,
+    ATTR_TEXALPHA = 0x10,
+    ATTR_BLEND_SEMITRANS = 0x20,
+    ATTR_BLEND_ADD = 0x40,
+    ATTR_BLEND_SUB = 0x60,
+    ATTR_BLEND_MASK = 0xe0,
+    ATTR_8 = 0x100,
+    ATTR_9 = 0x200,
+    ATTR_DROPSHADOW = 0x400,
+    ATTR_ENVMAP = 0x800,
+    ATTR_12 = 0x1000,
+    ATTR_13 = 0x2000,
+    ATTR_14 = 0x4000,
+    ATTR_15 = 0x8000,
+
+    FLAG_COLOR = 0x1000000,
+    FLAG_NOWEIGHT = 0x2000000,
+    FLAG_SHIFT = 0x18,
+    PRIM_SHIFT = 0x1c,
+};
+
 struct PmoMeshHeader
 {
     uint16_t vertexCount;

@@ -4,6 +4,7 @@
 #include "Core\CCamera.h"
 #include "Core\World.h"
 #include "CMap.h"
+#include "FileManager.h"
 
 namespace BBS
 {
@@ -24,11 +25,12 @@ namespace BBS
 		CCamera camera;
 		long frameCount;
 
-		void Init();
+		void Init(FileManager& fileManager);
 		void Tick(float, double);
 		void Draw();
 
 		void ProcessKeyboard(GLFWwindow *window);
 		void ProcessMouse(float deltaX, float deltaY);
+		void ProcessMouseScroll(double amount);
 	};
 }

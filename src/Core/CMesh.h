@@ -21,7 +21,8 @@ struct CMeshSection
 	unsigned int textureIndex;
 	unsigned int stride;
 	GLenum primType;
-	// TODO: Rendering Flags
+	bool twoSided;
+	bool blend;
 	std::vector<unsigned int> kickList;
 };
 
@@ -46,5 +47,5 @@ public:
 	GLuint VAO, VBO;
 
 	void Draw(RenderContext& context);
-	void Draw(RenderContext& context, glm::vec3 position, glm::vec3 rotation, glm::vec3 scale);
+	void Draw(RenderContext& context, const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale);
 };

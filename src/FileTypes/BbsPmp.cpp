@@ -65,7 +65,7 @@ PmpFile PmpFile::ReadPmpFile(std::ifstream& file, std::streamoff base)
         if (entry.offset != 0)
         {
             file.seekg(base + (std::streamoff)entry.offset);
-            entry.data = PmoFile::ReadPmoFile(file, base);
+            entry.data = PmoFile::ReadPmoFile(file, file.tellg());
         }
     }
     for (PmpTexEntry& entry : pmp.textures)
