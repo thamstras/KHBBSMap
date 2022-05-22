@@ -247,6 +247,7 @@ void CTextureObject::CreateTexture()
 	uint32 psHeight = textureHeight;
 
 	std::vector<uint8> decodedData = std::vector<uint8>();
+	decodedData.reserve(4 * width * height);
 
 	uint8* pixelData = image.data();
 	int pixelPtr = 0;
@@ -440,6 +441,7 @@ void CModelObject::LoadPmo(PmoFile& pmo, bool loadTextures)
 
 	if (pmo.hasMesh0())
 	{
+		sections.reserve(pmo.mesh0.size());
 		for (PmoMesh& mesh : pmo.mesh0)
 		{
 			CModelSection* section = new CModelSection();
@@ -450,6 +452,7 @@ void CModelObject::LoadPmo(PmoFile& pmo, bool loadTextures)
 
 	if (pmo.hasMesh1())
 	{
+		transSections.reserve(pmo.mesh1.size());
 		for (PmoMesh& mesh : pmo.mesh1)
 		{
 			CModelSection* section = new CModelSection();
@@ -459,6 +462,7 @@ void CModelObject::LoadPmo(PmoFile& pmo, bool loadTextures)
 	}
 	
 	ownsTextures = loadTextures;
+	textureNames.reserve(pmo.textures.size());
 	for (PmoTexture& tex : pmo.textures)
 	{
 		this->textureNames.push_back(std::string(tex.resourceName, 12));
@@ -468,6 +472,7 @@ void CModelObject::LoadPmo(PmoFile& pmo, bool loadTextures)
 
 void CModelObject::LinkExtTextures(std::unordered_map<std::string, CTextureInfo*> textureMap)
 {
+	textureObjects.reserve(textureNames.size());
 	for (std::string & texName : textureNames)
 	{
 		CTextureInfo* texObj = textureMap.at(texName);
@@ -478,6 +483,7 @@ void CModelObject::LinkExtTextures(std::unordered_map<std::string, CTextureInfo*
 void CModelObject::UpdateTextureOffsets()
 {
 	std::vector<glm::vec2> texOffs;
+	texOffs.reserve(textureObjects.size());
 	for (auto texture : textureObjects)
 	{
 		texOffs.push_back(texture->currentScroll);
@@ -491,6 +497,15 @@ CMesh* CModelObject::BuildMesh(std::vector<CModelSection*>& sections)
 	if (sections.size() == 0) return nullptr;
 
 	CMesh* mesh = new CMesh();
+
+	int totalVcount = 0;
+	for (CModelSection* sec : sections)
+	{
+		totalVcount += sec->vertexCount;
+	}
+	mesh->vertCount = totalVcount;
+	mesh->vertData.reserve(10 * totalVcount);
+
 	for each (CModelSection * modelSection in sections)
 	{
 		CMeshSection meshSection;
@@ -562,7 +577,6 @@ CMesh* CModelObject::BuildMesh(std::vector<CModelSection*>& sections)
 			}
 		}
 
-		mesh->vertCount += modelSection->vertexCount;
 		mesh->polyCount += std::accumulate(modelSection->primCount.begin(), modelSection->primCount.end(), 0);
 	}
 	mesh->Build();
@@ -577,6 +591,7 @@ void CModelObject::BuildMesh()
 	if (mesh0 == nullptr && mesh1 == nullptr) return;
 	
 	std::vector<CTexture*> textureList;
+	textureList.reserve(textureObjects.size());
 	for (auto texEntry : this->textureObjects)
 		textureList.push_back(texEntry->srcTexture->texture);
 	if (mesh0 != nullptr) mesh0->textures = textureList;
@@ -625,6 +640,7 @@ CModelSection::CModelSection()
 void CModelSection::LoadSection(PmoMesh& mesh)
 {
 	uint32 constDiffuse = 0;
+	int elementCount = 0;
 
 	PmoVertexFormatFlags format = mesh.header.vertexFormat;
 
@@ -640,10 +656,17 @@ void CModelSection::LoadSection(PmoMesh& mesh)
 	this->attributes = mesh.header.attributes;
 
 	if (format.color != 0)
+	{
 		this->flags.hasVColor = 1;
+		elementCount += 4;
+	}
 	if (format.texCoord != 0)
+	{
 		this->flags.hasTex = 1;
+		elementCount += 2;
+	}
 	this->flags.hasPosition = 1;
+	elementCount += 3;
 
 	if (format.diffuse != 0)
 	{
@@ -662,6 +685,7 @@ void CModelSection::LoadSection(PmoMesh& mesh)
 
 	// read verts
 	uint8* pData = mesh.vertexData.data();
+	vertexData.reserve(mesh.header.vertexCount * elementCount);
 	for (int vi = 0; vi < mesh.header.vertexCount; vi++)
 	{
 		uint8* pVertStart = pData + (vi * mesh.header.vertexSize);

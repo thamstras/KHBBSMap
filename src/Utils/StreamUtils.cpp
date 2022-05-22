@@ -10,6 +10,7 @@ std::vector<uint8_t> ReadBlob(std::istream& stream, size_t size)
 			throw std::runtime_error("Unknown IO Error");
 	}
 	std::vector<uint8_t> data = std::vector<uint8_t>();
+	data.reserve(size);
 	for (size_t i = 0; i < size; i++)
 	{
 		data.push_back(stream.get());
