@@ -30,20 +30,21 @@ void CMap::LoadMapFile(std::string filePath)
 	this->objects.resize(pmpFile.header.model_count);	// Note: resize not reserve because we're going to index into it directly and treat the vector like an array.
 	this->textures.reserve(pmpFile.header.tex_count);
 
+	// TODO: this->objects would be better as some kind of sparse array
 	// Create instances, loading the actual models as we go
 	for (PmpInstance& inst : pmpFile.instances)
 	{
 		if (inst.offset != 0)
 		{
-			if (inst.model_idx > objects.size())
+			if (inst.model_idx > objects.size() - 1)
 			{
 				std::cout << "[MAP] Objects vector resized from " << objects.size() << " to " << inst.model_idx << std::endl;
-				objects.resize(inst.model_idx);
+				objects.resize(inst.model_idx + 1);
 			}
-			if (this->objects[inst.model_idx - 1] == nullptr)
+			if (this->objects[inst.model_idx] == nullptr)
 			{
-				this->objects[inst.model_idx - 1] = new CModelObject();
-				this->objects[inst.model_idx - 1]->LoadPmo(inst.data, false);
+				this->objects[inst.model_idx] = new CModelObject();
+				this->objects[inst.model_idx]->LoadPmo(inst.data, false);
 			}
 		}
 
@@ -153,9 +154,14 @@ void CMap::Clear()
 
 	for (auto& texture : textures)
 		delete texture.second;
+
+	instances.clear();
+	objects.clear();
+	textures.clear();
 }
 
 CMapInstance::CMapInstance(CMap* map, PmpInstance& inst)
+	: boundingBox(glm::vec3(0.0f), glm::vec3(0.0f))
 {
 	this->parent = map;
 	this->position = glm::vec3(inst.loc[0], inst.loc[1], inst.loc[2]);
@@ -164,7 +170,8 @@ CMapInstance::CMapInstance(CMap* map, PmpInstance& inst)
 	this->objectID = inst.model_idx;
 	this->flags = inst.flags;
 
-	this->model = this->parent->objects[this->objectID - 1];
+	this->model = this->parent->objects[this->objectID];
+	if (this->model) this->boundingBox = AABBox::Translate(this->model->boundingBox, this->position);
 }
 
 void CMapInstance::DoDraw(RenderContext& render)
@@ -173,11 +180,9 @@ void CMapInstance::DoDraw(RenderContext& render)
 		model->DoDraw(render, position, rotation, scale);
 }
 
-// TODO: This is too expensive. How much of this can we work out ahead of time and cache?
 float CMapInstance::CalcZ(RenderContext& context)
 {
-	glm::vec4 objCamPos = context.render.viewMatrix * glm::translate(glm::mat4(1.0f), this->position) * glm::vec4(this->position, 1.0f);
-	return -objCamPos.z;
+	return glm::dot(this->position - context.render.current_camera->Position, context.render.current_camera->Front);
 }
 
 void CMapInstance::Update(float deltaTime, double worldTime)
@@ -187,22 +192,11 @@ void CMapInstance::Update(float deltaTime, double worldTime)
 
 bool CMapInstance::BBox(CCamera* cam, glm::mat4 projMatrix)
 {
-	// TODO: Constructing the AABBox every call is FAR too expensive.
-	//		 The model needs to work it out once and store it,
-	//		 then the instance needs to get the transformed version and store it.
+	// TODO: Disabled for now
 	return true;
 	
-	glm::vec4 min = glm::vec4(FLT_MAX);
-	glm::vec4 max = glm::vec4(-FLT_MAX);
-	for (auto& vert : this->model->bbox)
-	{
-		min = glm::min(min, vert);
-		max = glm::max(max, vert);
-	}
-
-	AABBox bbox = AABBox(glm::vec3(min), glm::vec3(max));
 	glm::mat4 vpmatrix = projMatrix * cam->GetViewMatrix();
 	Frustum frust = Frustum::FromVPMatrix(vpmatrix);
 
-	return Intersect(bbox, frust);
+	return Intersect(this->model->boundingBox, frust);
 }

@@ -58,8 +58,8 @@ namespace BBS
 		glm::vec3 scale;
 		unsigned int objectID;
 		uint16_t flags;
+		AABBox boundingBox;
 
-		//CMapObject* renderObject;
 		CModelObject* model;
 
 		CMapInstance(CMap* map, PmpInstance& inst);

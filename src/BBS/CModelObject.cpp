@@ -6,6 +6,7 @@
 using namespace BBS;
 
 CModelObject::CModelObject()
+	: boundingBox(glm::vec3(0.0f), glm::vec3(0.0f))
 {
 	scale = 0.0f;
 	for (int i = 0; i < 8; i++) bbox[i] = glm::vec4(0.0f);
@@ -47,6 +48,16 @@ void CModelObject::LoadPmo(PmoFile& pmo, bool loadTextures)
 			pmo.header.boundingBox[(i * 4) + 2],
 			pmo.header.boundingBox[(i * 4) + 3]);
 	}
+
+	glm::vec4 min = glm::vec4(FLT_MAX);
+	glm::vec4 max = glm::vec4(-FLT_MAX);
+	for (auto& vert : bbox)
+	{
+		min = glm::min(min, vert);
+		max = glm::max(max, vert);
+	}
+
+	boundingBox = AABBox(glm::vec3(min), glm::vec3(max));
 
 	if (pmo.hasMesh0())
 	{
@@ -122,6 +133,7 @@ CMesh* CModelObject::BuildMesh(std::vector<CModelSection*>& sections)
 	{
 		CMeshSection meshSection;
 		meshSection.vertCount = modelSection->vertexCount;
+		// TODO: Dummy (idx: -1) texture
 		meshSection.textureIndex = modelSection->textureIndex;
 		meshSection.stride = (10 * sizeof(float));
 		meshSection.twoSided = modelSection->attributes & ATTR_BACK;
@@ -175,9 +187,9 @@ CMesh* CModelObject::BuildMesh(std::vector<CModelSection*>& sections)
 
 			if (modelSection->flags.hasPosition)
 			{
-				mesh->vertData.push_back(modelSection->vertexData[rp++]);
-				mesh->vertData.push_back(modelSection->vertexData[rp++]);
-				mesh->vertData.push_back(modelSection->vertexData[rp++]);
+				mesh->vertData.push_back(modelSection->vertexData[rp++] * this->scale);
+				mesh->vertData.push_back(modelSection->vertexData[rp++] * this->scale);
+				mesh->vertData.push_back(modelSection->vertexData[rp++] * this->scale);
 				mesh->vertData.push_back(1.0f);
 			}
 			else
@@ -212,12 +224,11 @@ void CModelObject::BuildMesh()
 
 void CModelObject::DoDraw(RenderContext& render, const glm::vec3& pos, const glm::vec3& rot, const glm::vec3& scale)
 {
-	auto trueScale = scale * this->scale;
 	ERenderLayer pass = render.render.currentPass;
 	if (pass == LAYER_SKY)
 	{
-		if (mesh0) mesh0->Draw(render, pos, rot, trueScale);
-		if (mesh1) mesh1->Draw(render, pos, rot, trueScale);
+		if (mesh0) mesh0->Draw(render, pos, rot, scale);
+		if (mesh1) mesh1->Draw(render, pos, rot, scale);
 	}
 	else if (pass == LAYER_STATIC)
 	{

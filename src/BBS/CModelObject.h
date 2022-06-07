@@ -5,6 +5,7 @@
 #include "Core/CMesh.h"
 #include <unordered_map>
 #include "CTextureInfo.h"
+#include "Utils\Math.h"
 
 namespace BBS
 {
@@ -26,6 +27,7 @@ namespace BBS
 
 		float scale;
 		glm::vec4 bbox[8];
+		AABBox boundingBox;
 
 		std::vector<CModelSection*> sections;
 		std::vector<CModelSection*> transSections;

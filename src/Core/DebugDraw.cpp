@@ -1,5 +1,6 @@
 #include "DebugDraw.h"
 #include "ShaderLibrary.h"
+#include "CCamera.h"
 
 using namespace std::string_literals;
 
@@ -123,11 +124,9 @@ void CDebugCube::DoDraw(RenderContext& context)
 	context.stats.tris_drawn += 24;	// 12 lines, 2 tris per line
 }
 
-// TODO: This is too expensive. How much of this can we work out ahead of time and cache?
 float CDebugCube::CalcZ(RenderContext& context)
 {
-	glm::vec4 objCamPos = context.render.viewMatrix * glm::translate(glm::mat4(1.0f), this->pos) * glm::vec4(this->pos, 1.0f);
-	return -objCamPos.z;
+	return glm::dot(this->pos - context.render.current_camera->Position, context.render.current_camera->Front);
 }
 
 void DebugDraw::AddDebugObject(CDebugObject* obj)

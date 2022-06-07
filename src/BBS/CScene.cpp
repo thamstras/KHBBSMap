@@ -74,6 +74,10 @@ void CScene::Tick(float deltaTime, double worldTime)
 
 void CScene::Draw()
 {
+	// TODO: Cap z depth to far clip. (or maybe 2x far clip)
+	// Not sure how much it'll help for most maps (Other than rumble racing) but
+	// probably a good idea none the less.
+	
 	glDisable(GL_DEPTH_TEST);
 	renderContext.render.currentPass = LAYER_SKY;
 	for (CRenderObject* renderObject : renderContext.render.skyDrawList)
