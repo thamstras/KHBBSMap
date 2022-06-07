@@ -101,6 +101,7 @@ void CDebugCube::DoDraw(RenderContext& context)
 	// Draw cube at stored transform using static vao.
 	// Suggest using GL_LINES so cube is always wireframe
 
+	// TODO: Debug objects don't move, so all this can be worked out once and then stored.
 	glm::quat rot = glm::quat(this->rot);
 	glm::mat4 model = glm::mat4(1.0f);
 	model = glm::translate(model, this->pos);
@@ -122,6 +123,7 @@ void CDebugCube::DoDraw(RenderContext& context)
 	context.stats.tris_drawn += 24;	// 12 lines, 2 tris per line
 }
 
+// TODO: This is too expensive. How much of this can we work out ahead of time and cache?
 float CDebugCube::CalcZ(RenderContext& context)
 {
 	glm::vec4 objCamPos = context.render.viewMatrix * glm::translate(glm::mat4(1.0f), this->pos) * glm::vec4(this->pos, 1.0f);
@@ -145,6 +147,8 @@ void DebugDraw::AddDebugObject(CDebugObject* obj)
 
 void DebugDraw::Update(float deltaTime, double worldTime)
 {
+	// TODO: WE DON'T RESUBMIT DEBUG OBJECTS TO THE DRAW LIST!
+	// This isn't a problem right now because no object lives more than 1 frame but still.
 	for (int i = 0; i < activeDebugObjects.size(); i++)
 	{
 		CDebugObject* obj = activeDebugObjects[i];

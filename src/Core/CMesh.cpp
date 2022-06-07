@@ -81,6 +81,8 @@ void CMesh::Draw(RenderContext& context, const glm::vec3& position, const glm::v
 
 	glBindVertexArray(VAO);
 
+	// TODO: CShader::set*(...) functions are still fairly expensive despite using std::string literals.
+	//		 We should probably cache the uniform locations?
 	shader->setMat4("model"s, model);
 	if (context.render.currentPass == LAYER_SKY)
 		shader->setMat4("view"s, context.render.skyViewMatrix);
