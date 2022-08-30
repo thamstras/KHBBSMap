@@ -12,6 +12,8 @@ namespace BBS
 	class CScene
 	{
 		void StartFrame();
+		
+		CMapInstance* pSelectedInstance = nullptr;
 
 	public:
 		CMap* theMap;	// All the map geometry. PMP
@@ -28,6 +30,8 @@ namespace BBS
 		void Init(FileManager& fileManager);
 		void Tick(float, double);
 		void Draw();
+
+		void GUI();
 
 		void ProcessKeyboard(GLFWwindow *window);
 		void ProcessMouse(float deltaX, float deltaY);

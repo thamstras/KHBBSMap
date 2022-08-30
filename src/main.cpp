@@ -73,8 +73,8 @@ const bool DISABLE_MOUSELOCK = true;
 // #### GLOBALS ####
 WindowData g_window;
 MouseData g_mouse = { 0.0, 0.0, 0.0f, 0.0f, true, false };
-BBS::CScene* theScene;
-CFramebuffer* sceneBuffer;
+BBS::CScene* g_theScene;
+CFramebuffer* g_sceneBuffer;
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -135,14 +135,14 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	}*/
 
 	if (g_window.hasCursorLock)
-		theScene->ProcessMouse(g_mouse.deltaX, g_mouse.deltaY);
+		g_theScene->ProcessMouse(g_mouse.deltaX, g_mouse.deltaY);
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
 	if (!ImGui::GetIO().WantCaptureMouse && !g_mouseOverViewport)
 	{
-		theScene->ProcessMouseScroll(yoffset);
+		g_theScene->ProcessMouseScroll(yoffset);
 	}
 }
 
@@ -182,7 +182,7 @@ void processInput(GLFWwindow *window)
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 
-	theScene->ProcessKeyboard(window);
+	g_theScene->ProcessKeyboard(window);
 }
 
 // #### FUNCTIONS
@@ -258,6 +258,9 @@ bool init(FileManager& fileManager)
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+	io.ConfigDockingWithShift = true;
 	io.ConfigWindowsMoveFromTitleBarOnly = true;
 	io.ConfigWindowsResizeFromEdges = true;
 	//ImGui::StyleColorsDark();
@@ -338,12 +341,49 @@ void gui_DrawOpenFileModal()
 
 void gui_DrawSystemGui(FileManager& fileManager)
 {
+	// System Gui (toolbar etc.)
+	bool shouldOpenFile = false;
+	bool shouldCloseFile = false;
+	bool shouldExport = false;
+	bool shouldExit = false;
+
+	ImGui::BeginMainMenuBar();
+
+	if (ImGui::BeginMenu("File")) {
+		if (ImGui::MenuItem("Open...")) shouldOpenFile = true;
+		//if (ImGui::MenuItem("Close")) shouldCloseFile = true;
+		ImGui::Separator();
+		if (ImGui::MenuItem("Export...")) shouldExport = true;
+		ImGui::Separator();
+		if (ImGui::MenuItem("Exit")) shouldExit = true;
+		ImGui::EndMenu();
+	}
+
+	ImGui::EndMainMenuBar();
+
+	//if (shouldOpenFile) ImGui::OpenPopup("OpenFileModal");
+	if (shouldExport) ImGui::OpenPopup("ExportModal");
+
+	if (shouldExit) glfwSetWindowShouldClose(g_window.window, true);
+
+	if (shouldOpenFile)
+	{
+		g_loadNewMap = true;
+	}
+
+	// Modals
+	//gui_DrawOpenFileModal();
+	//gui_DrawExportOptions(fileManager);
+}
+
+void gui_DrawSysInfo()
+{
 	// 'System' info window
 	ImGui::Begin("System");
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 	//ImGui::Text("Wall time: 0.0s Game time: %.3fs", g_worldTime);
 
-	CCamera* camera = &theScene->camera;
+	CCamera* camera = &g_theScene->camera;
 	ImGui::TextColored(ImVec4(0, 0.75f, 0.1125f, 1.0f), "Camera");
 	ImGui::Text("Pos { %.2f, %.2f, %.2f } Pitch %.2f Yaw %.2f",
 		camera->Position.x, camera->Position.y, camera->Position.z,
@@ -368,41 +408,6 @@ void gui_DrawSystemGui(FileManager& fileManager)
 
 	if (gui_show_metrics)
 		ImGui::ShowMetricsWindow();
-
-	// System Gui (toolbar etc.)
-	bool shouldOpenFile = false;
-	bool shouldCloseFile = false;
-	bool shouldExport = false;
-	bool shouldExit = false;
-
-	ImGui::BeginMainMenuBar();
-	
-	if (ImGui::BeginMenu("File")) {
-		if (ImGui::MenuItem("Open...")) shouldOpenFile = true;
-		//if (ImGui::MenuItem("Close")) shouldCloseFile = true;
-		ImGui::Separator();
-		if (ImGui::MenuItem("Export...")) shouldExport = true;
-		ImGui::Separator();
-		if (ImGui::MenuItem("Exit")) shouldExit = true;
-		ImGui::EndMenu();
-	}
-
-	ImGui::EndMainMenuBar();
-
-	//if (shouldOpenFile) ImGui::OpenPopup("OpenFileModal");
-	if (shouldExport) ImGui::OpenPopup("ExportModal");
-
-	if (shouldExit) glfwSetWindowShouldClose(g_window.window, true);
-
-	if (shouldOpenFile)
-	{
-		g_loadNewMap = true;
-	}
-
-
-	// Modals
-	//gui_DrawOpenFileModal();
-	//gui_DrawExportOptions(fileManager);
 }
 
 void gui_DrawRenderGui(RenderContext& context)
@@ -453,7 +458,7 @@ void gui_DrawDebugGui(RenderContext& context)
 
 	ImGui::End();
 
-	unsigned int max_object_id = theScene->theMap->instances.size();
+	unsigned int max_object_id = g_theScene->theMap->instances.size();
 	if (context.debug.obj_id > max_object_id)
 		context.debug.obj_id = max_object_id;
 	else if (context.debug.obj_id > max_object_id)
@@ -468,7 +473,7 @@ void gui_DrawDebugGui(RenderContext& context)
 void gui_DrawEnvGui(FileManager& fileManager, RenderContext& context)
 {
 	bool loadPVD = false;
-	float viewAngle = glm::radians(theScene->camera.Zoom);
+	float viewAngle = glm::radians(g_theScene->camera.Zoom);
 	ImGui::Begin("Environment");
 	
 	ImGui::ColorEdit4("Fog Color", glm::value_ptr(context.env.fogColor));
@@ -490,7 +495,7 @@ void gui_DrawEnvGui(FileManager& fileManager, RenderContext& context)
 	ImGui::SetNextItemWidth(0.4f * ImGui::CalcItemWidth());
 	if (ImGui::InputFloat("View Angle", &viewAngle))
 	{
-		theScene->camera.Zoom = glm::degrees(viewAngle);
+		g_theScene->camera.Zoom = glm::degrees(viewAngle);
 	}
 	
 	if (ImGui::Button("Load Env (PVD)"))
@@ -534,7 +539,7 @@ void gui_DrawEnvGui(FileManager& fileManager, RenderContext& context)
 			std::fseek(file, 0x30, SEEK_SET);
 			float viewIn;
 			std::fread((void*)(&viewIn), sizeof(float), 1, file);
-			theScene->camera.Zoom = glm::degrees(viewIn);
+			g_theScene->camera.Zoom = glm::degrees(viewIn);
 
 			std::fclose(file);
 		}
@@ -571,11 +576,52 @@ void gui_splash()
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	glfwSwapBuffers(g_window.window);
+
+	// Update and Render additional Platform Windows
+	if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	{
+		ImGui::UpdatePlatformWindows();
+		ImGui::RenderPlatformWindowsDefault();
+	}
 }
 
 void gui_endSplash()
 {
 	// TODO: delete texture
+}
+
+void gui_Viewport()
+{
+	//ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(1, 1));
+	ImGui::Begin("Viewport", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoBringToFrontOnFocus);
+	GLuint sceneTexture = g_sceneBuffer->ResolveTexture();
+	ImGui::Image((void*)(intptr_t)(sceneTexture), ImVec2(g_sceneBuffer->Width(), g_sceneBuffer->Height()), ImVec2(0, 1), ImVec2(1, 0));
+	g_mouseOverViewport = ImGui::IsWindowFocused();	// TODO: This needs to get to the input processing somehow
+	ImGui::End();
+	ImGui::PopStyleVar();
+}
+
+void gui_draw(FileManager& fileManager)
+{
+	// Top menu bar
+	gui_DrawSystemGui(fileManager);
+
+	ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+
+	gui_Viewport();
+
+	gui_DrawSysInfo();
+	//if (gui_show_map_data) gui_MapData();
+	if (g_theScene) g_theScene->GUI();
+	//if (gui_show_data_viewer) gui_loaded_data();
+	if (gui_show_debug_tool) gui_DrawDebugGui(g_theScene->renderContext);
+	//gui_tex_view();
+
+	gui_DrawRenderGui(g_theScene->renderContext);
+	gui_DrawEnvGui(fileManager, g_theScene->renderContext);
+
+	//ImGui::ShowDemoWindow();
 }
 
 void LoadNewMap(FileManager& fileManager, RenderContext renderContext)
@@ -588,13 +634,13 @@ void LoadNewMap(FileManager& fileManager, RenderContext renderContext)
 		//ParseLoadedMap();
 		//LoadMapTextures();
 		//LoadMapObjects();
-		theScene->theMap->Clear();
-		theScene->theMap->LoadMapFile(newFile);
+		g_theScene->theMap->Clear();
+		g_theScene->theMap->LoadMapFile(newFile);
 
 		renderContext.debug.obj_id = 0;
 		renderContext.debug.section_id = 0;
 
-		theScene->camera.Reset(glm::vec3(0.0f, 1.5f, -3.0f));
+		g_theScene->camera.Reset(glm::vec3(0.0f, 1.5f, -3.0f));
 	}
 }
 
@@ -613,10 +659,10 @@ int main(int argc, char **argv)
 
 	std::string loadPath;
 
-	theScene = new BBS::CScene();
+	g_theScene = new BBS::CScene();
 	try
 	{
-		theScene->Init(fileManager);
+		g_theScene->Init(fileManager);
 	}
 	catch (const std::runtime_error& e)
 	{
@@ -637,11 +683,11 @@ int main(int argc, char **argv)
 	// TODO: CScene::OpenMap(...);
 	BBS::CMap *map = new BBS::CMap();
 	map->LoadMapFile(loadPath);
-	theScene->theMap = map;
+	g_theScene->theMap = map;
 
 	gui_endSplash();
 
-	sceneBuffer = new CFramebuffer(1280, 720, USE_ANTIALIASING ? 4 : 1);
+	g_sceneBuffer = new CFramebuffer(1280, 720, USE_ANTIALIASING ? 4 : 1);
 
 	while (!glfwWindowShouldClose(g_window.window))
 	{
@@ -659,7 +705,7 @@ int main(int argc, char **argv)
 
 		// TODO: Could all this framebuffer stuff move down into CScene?
 		// Start drawing to scene buffer
-		sceneBuffer->Bind();
+		g_sceneBuffer->Bind();
 
 		// Start the Dear ImGui frame
 		ImGui_ImplOpenGL3_NewFrame();
@@ -671,34 +717,15 @@ int main(int argc, char **argv)
 		//Render_StartFrame(globalRenderContext);
 		
 		//RenderBBSMap(globalRenderContext);
-		theScene->Tick(deltaTime, g_worldTime);
+		g_theScene->Tick(deltaTime, g_worldTime);
 
-		theScene->Draw();
+		g_theScene->Draw();
 
 		// Stop drawing to scene buffer (drawing to root window again)
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, g_window.width, g_window.height);
 
-		gui_DrawSystemGui(fileManager);
-
-		ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(1, 1));
-		ImGui::Begin("Viewport", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoBringToFrontOnFocus);
-		GLuint sceneTexture = sceneBuffer->ResolveTexture();
-		ImGui::Image((void*)(intptr_t)(sceneTexture), ImVec2(sceneBuffer->Width(), sceneBuffer->Height()), ImVec2(0, 1), ImVec2(1, 0));
-		g_mouseOverViewport = ImGui::IsWindowFocused();	// TODO: This needs to get to the input processing somehow
-		ImGui::End();
-		ImGui::PopStyleVar();
-
-		//if (gui_show_map_data) gui_MapData();
-		//if (gui_show_data_viewer) gui_loaded_data();
-		if (gui_show_debug_tool) gui_DrawDebugGui(theScene->renderContext);
-		//gui_tex_view();
-
-		gui_DrawRenderGui(theScene->renderContext);
-		gui_DrawEnvGui(fileManager, theScene->renderContext);
-
-		//ImGui::ShowDemoWindow();
+		gui_draw(fileManager);
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -706,10 +733,17 @@ int main(int argc, char **argv)
 		glfwSwapBuffers(g_window.window);
 		glfwPollEvents();
 
+		// Update and Render additional Platform Windows
+		if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			ImGui::UpdatePlatformWindows();
+			ImGui::RenderPlatformWindowsDefault();
+		}
+
 		if (g_loadNewMap)
 		{
 			g_loadNewMap = false;
-			LoadNewMap(fileManager, theScene->renderContext);
+			LoadNewMap(fileManager, g_theScene->renderContext);
 		}
 
 	}

@@ -1,5 +1,6 @@
 #include "CScene.h"
 #include <algorithm>
+#include <format>
 
 using namespace BBS;
 
@@ -184,4 +185,34 @@ void CScene::StartFrame()
 	renderContext.render.dynamicDrawList.clear();
 	renderContext.render.overlayDrawList.clear();
 	renderContext.render.guiDrawList.clear();
+}
+
+void CScene::GUI()
+{
+	if (ImGui::Begin("Instances"))
+	{
+		if (ImGui::BeginListBox("Instances"))
+		{
+			for each (CMapInstance * inst in theMap->instances)
+			{
+				std::string label = string_format("Inst { %.2f, %.2f, %.2f } [%d]", inst->position.x, inst->position.y, inst->position.z, inst->objectID);
+				if (ImGui::Selectable(label.c_str(),(pSelectedInstance == inst)))
+					pSelectedInstance = inst;
+			}
+			ImGui::EndListBox();
+		}
+		ImGui::Separator();
+		ImGui::Text("Selected Instance");
+		if (pSelectedInstance)
+		{
+			ImGui::Text("Location: {%2.f, %2.f, %2.f}", pSelectedInstance->position[0], pSelectedInstance->position[1], pSelectedInstance->position[2]);
+			ImGui::Text("Rotation: {%2.f, %2.f, %2.f}", pSelectedInstance->rotation[0], pSelectedInstance->rotation[1], pSelectedInstance->rotation[2]);
+			ImGui::Text("Scale:    {%2.f, %2.f, %2.f}", pSelectedInstance->scale[0], pSelectedInstance->scale[1], pSelectedInstance->scale[2]);
+		}
+		else
+		{
+			ImGui::Text("None");
+		}
+	}
+	ImGui::End();
 }
