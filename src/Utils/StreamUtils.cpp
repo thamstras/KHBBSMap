@@ -33,3 +33,17 @@ void Realign(std::istream& stream, size_t size)
 		stream.seekg((size - (pos % size)), std::ios_base::cur);
 	}
 }
+
+uint16_t PeekShort(std::istream& stream)
+{
+	std::streamoff pos = stream.tellg();
+	int a = stream.get();
+	if (a != std::istream::traits_type::eof())
+	{
+		int b = stream.get();
+		uint16_t result = (a & 0xFF) | ((b & 0xFF) << 8);
+		stream.seekg(pos, std::ios_base::beg);
+		return result;
+	}
+	throw std::runtime_error("Unexpected EOF");
+}

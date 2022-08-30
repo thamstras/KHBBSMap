@@ -64,6 +64,7 @@ void CModelObject::LoadPmo(PmoFile& pmo, bool loadTextures)
 		sections.reserve(pmo.mesh0.size());
 		for (PmoMesh& mesh : pmo.mesh0)
 		{
+			if (mesh.header.vertexCount == 0) continue;
 			CModelSection* section = new CModelSection();
 			section->LoadSection(mesh);
 			sections.push_back(section);
@@ -75,6 +76,7 @@ void CModelObject::LoadPmo(PmoFile& pmo, bool loadTextures)
 		transSections.reserve(pmo.mesh1.size());
 		for (PmoMesh& mesh : pmo.mesh1)
 		{
+			if (mesh.header.vertexCount == 0) continue;
 			CModelSection* section = new CModelSection();
 			section->LoadSection(mesh);
 			transSections.push_back(section);

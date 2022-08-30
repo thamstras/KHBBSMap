@@ -4,9 +4,6 @@
 
 using namespace std::string_literals;
 
-// Just stashing this here because CoreRender.h doesn't have a corresponding cpp file.
-CRenderObject::~CRenderObject() {};
-
 CDebugObject::CDebugObject(float life) : lifetimeRemaining(life)
 {
 

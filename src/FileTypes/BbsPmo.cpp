@@ -88,7 +88,10 @@ PmoMesh ParsePmoMesh(std::ifstream& file, bool hasSkeleton)
 {
     PmoMesh mesh;
     mesh.header = ParsePmoMeshHeader(file, hasSkeleton);
-    mesh.vertexData = ReadBlob(file, mesh.header.vertexCount * mesh.header.vertexSize);
+    if (mesh.header.vertexCount > 0)
+    {
+        mesh.vertexData = ReadBlob(file, mesh.header.vertexCount * mesh.header.vertexSize);
+    }
     return mesh;
 }
 
@@ -149,20 +152,20 @@ PmoFile PmoFile::ReadPmoFile(std::ifstream& file, std::streamoff base)
     if (pmo.header.mesh0Offset != 0)
     {
         file.seekg(base + (std::streamoff)pmo.header.mesh0Offset, std::ios_base::beg);
-        while ((file.peek() != '\0') && !file.eof())
+        do
         {
             pmo.mesh0.push_back(ParsePmoMesh(file, (pmo.header.skeletonOffset != 0)));
             Realign(file, 0x4);
-        }
+        } while (pmo.mesh0[pmo.mesh0.size() - 1].header.vertexCount != 0);
     }
     if (pmo.header.mesh1Offset != 0)
     {
         file.seekg(base + (std::streamoff)pmo.header.mesh1Offset, std::ios_base::beg);
-        while ((file.peek() != '\0') && !file.eof())
+        do
         {
             pmo.mesh1.push_back(ParsePmoMesh(file, (pmo.header.skeletonOffset != 0)));
             Realign(file, 0x4);
-        }
+        } while (pmo.mesh1[pmo.mesh1.size() - 1].header.vertexCount != 0);
     }
     if (pmo.header.skeletonOffset != 0)
     {

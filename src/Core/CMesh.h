@@ -28,6 +28,12 @@ struct CMeshSection
 
 class CMesh
 {
+private:
+	static CTexture* dummyTexture;
+	static glm::vec2 zeroOffset;
+
+	std::shared_ptr<CShader> SelectShader(RenderContext& context);
+
 public:
 	CMesh();
 	virtual ~CMesh();

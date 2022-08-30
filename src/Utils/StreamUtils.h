@@ -24,3 +24,5 @@ void ReadStreamArr(std::istream& stream, T1* arr, size_t count)
 std::vector<uint8_t> ReadBlob(std::istream& stream, size_t size);
 
 void Realign(std::istream& stream, size_t alignment);
+
+uint16_t PeekShort(std::istream& stream);

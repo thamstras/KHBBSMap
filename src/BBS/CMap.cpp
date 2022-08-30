@@ -115,17 +115,8 @@ void CMap::Update(WorldContext& context)
 		}
 		else
 		{
-			//glm::vec4 min = glm::vec4(FLT_MAX);
-			//glm::vec4 max = glm::vec4(-FLT_MAX);
-			//for (auto& vert : instance->model->bbox)
-			//{
-			//	min = glm::min(min, vert);
-			//	max = glm::max(max, vert);
-			//}
-			//
-			//AABBox bbox = AABBox(glm::vec3(min), glm::vec3(max));
-			//bbox = AABBox::Translate(bbox, instance->position);
-			//DebugDraw::DebugCube(*context.render, bbox.center(), instance->rotation, bbox.halfExtents() * 2.0f * instance->scale, glm::vec3(1.0, 0.0, 0.0));
+			//DebugDraw::DebugCube(*context.render,
+			//	instance->boundingBox.center(), glm::vec3(0.0f), instance->boundingBox.halfExtents() * 2.0f * instance->scale, glm::vec3(1.0, 0.0, 0.0));
 
 			//if (instance->BBox(context.render->render.current_camera, context.render->render.projectionMatrix))
 			//{

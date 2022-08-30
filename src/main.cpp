@@ -12,11 +12,33 @@
 #include "Core\ShaderLibrary.h"
 #include "Core\CCamera.h"
 #include "Core\World.h"
+#include "Core\CFramebuffer.h"
 
 #include "BBS\CScene.h"
 #include "BBS\CMap.h"
 
 #include "glm/gtc/type_ptr.hpp"
+
+/*
+
+#### TODO ####
+[X] Fix 'dummy' (idx 0xff) textures
+[X] Make render flags (disable blend, disable textures etc.) work again
+[X] Fix DP_02
+[/] Rewrite input system so the new viewport works properly (almost there)
+[X] Get multisampling implimented in new viewport
+[ ] Move imgui to docking branch
+[ ] Write new GUI stuff
+[ ] Save As PMP
+[ ] Import/Export PMO
+[ ] Export FBX
+[ ] Texture overrides (probably going to need some kind of TextureManager.
+[ ] Load map file from command line
+[ ] Enable/Disable texture filtering + Framebuffer color depth at runtime (BBS<->PC mode)
+[ ] Load BCD
+[ ] Load OLO (will need FileManager overhaul)
+
+*/
 
 // #### STRUCTS ####
 struct MouseData
@@ -52,6 +74,7 @@ const bool DISABLE_MOUSELOCK = true;
 WindowData g_window;
 MouseData g_mouse = { 0.0, 0.0, 0.0f, 0.0f, true, false };
 BBS::CScene* theScene;
+CFramebuffer* sceneBuffer;
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -61,10 +84,12 @@ bool gui_show_metrics = false;
 
 bool g_loadNewMap = false;
 
+bool g_mouseOverViewport = false;
+
 // #### CALLBACKS ####
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-	glViewport(0, 0, width, height);
+	//glViewport(0, 0, width, height);
 	g_window.width = width;
 	g_window.height = height;
 }
@@ -103,11 +128,11 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	g_mouse.xPos = xpos;
 	g_mouse.yPos = ypos;
 
-	if (ImGui::GetIO().WantCaptureMouse)
+	/*if (ImGui::GetIO().WantCaptureMouse && !g_mouseOverViewport)
 	{
 		if (g_window.hasCursorLock) unlockCursor();
 		return;
-	}
+	}*/
 
 	if (g_window.hasCursorLock)
 		theScene->ProcessMouse(g_mouse.deltaX, g_mouse.deltaY);
@@ -115,7 +140,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-	if (!ImGui::GetIO().WantCaptureMouse)
+	if (!ImGui::GetIO().WantCaptureMouse && !g_mouseOverViewport)
 	{
 		theScene->ProcessMouseScroll(yoffset);
 	}
@@ -123,13 +148,13 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 
 void processInput(GLFWwindow *window)
 {
-	if (ImGui::GetIO().WantCaptureKeyboard)
+	if (ImGui::GetIO().WantCaptureKeyboard && !g_mouseOverViewport)
 	{
 		if (g_window.hasCursorLock) unlockCursor();
 		return;
 	}
 
-	if (!ImGui::GetIO().WantCaptureMouse
+	/*if ((!ImGui::GetIO().WantCaptureMouse || g_mouseOverViewport)
 		&& glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS)
 	{
 		if (!g_window.hasCursorLock) lockCursor();
@@ -138,7 +163,18 @@ void processInput(GLFWwindow *window)
 	{
 		if (g_window.hasCursorLock) unlockCursor();
 	}
-	if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS && !DISABLE_MOUSELOCK)
+	{
+		if (g_window.hasCursorLock) unlockCursor();
+	}*/
+	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS)
+	{
+		if (g_mouseOverViewport)
+		{
+			if (!g_window.hasCursorLock) lockCursor();
+		}
+	}
+	else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_RELEASE)
 	{
 		if (g_window.hasCursorLock) unlockCursor();
 	}
@@ -222,10 +258,13 @@ bool init(FileManager& fileManager)
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigWindowsMoveFromTitleBarOnly = true;
+	io.ConfigWindowsResizeFromEdges = true;
 	//ImGui::StyleColorsDark();
 	ImGui::StyleColorsLight();
 	ImGui::GetStyle().ColorButtonPosition = ImGuiDir_Left;
 	ImGui::GetStyle().FrameBorderSize = 1.0f;
+	ImGui::GetStyle().WindowRounding = 7.0f;
 	ImGui_ImplGlfw_InitForOpenGL(g_window.window, true);
 	ImGui_ImplOpenGL3_Init();
 	
@@ -309,7 +348,8 @@ void gui_DrawSystemGui(FileManager& fileManager)
 	ImGui::Text("Pos { %.2f, %.2f, %.2f } Pitch %.2f Yaw %.2f",
 		camera->Position.x, camera->Position.y, camera->Position.z,
 		camera->Pitch, camera->Yaw);
-	if (g_window.hasCursorLock)
+	//if (g_window.hasCursorLock)
+	if (g_mouseOverViewport)
 		ImGui::TextColored(ImVec4(0, 0.75f, 0.1125f, 1.0f), "Focused");
 	else
 		ImGui::TextColored(ImVec4(1.0f, 0, 0, 1.0f), "Unfocused");
@@ -601,6 +641,8 @@ int main(int argc, char **argv)
 
 	gui_endSplash();
 
+	sceneBuffer = new CFramebuffer(1280, 720, USE_ANTIALIASING ? 4 : 1);
+
 	while (!glfwWindowShouldClose(g_window.window))
 	{
 		float currentFrame = glfwGetTime();
@@ -611,6 +653,13 @@ int main(int argc, char **argv)
 
 		//globalRenderContext.frame_deltaTime = deltaTime;
 		//globalRenderContext.frame_worldTime = g_worldTime;
+
+		// Clear the root window
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		// TODO: Could all this framebuffer stuff move down into CScene?
+		// Start drawing to scene buffer
+		sceneBuffer->Bind();
 
 		// Start the Dear ImGui frame
 		ImGui_ImplOpenGL3_NewFrame();
@@ -626,7 +675,20 @@ int main(int argc, char **argv)
 
 		theScene->Draw();
 
+		// Stop drawing to scene buffer (drawing to root window again)
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, g_window.width, g_window.height);
+
 		gui_DrawSystemGui(fileManager);
+
+		ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(1, 1));
+		ImGui::Begin("Viewport", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoBringToFrontOnFocus);
+		GLuint sceneTexture = sceneBuffer->ResolveTexture();
+		ImGui::Image((void*)(intptr_t)(sceneTexture), ImVec2(sceneBuffer->Width(), sceneBuffer->Height()), ImVec2(0, 1), ImVec2(1, 0));
+		g_mouseOverViewport = ImGui::IsWindowFocused();	// TODO: This needs to get to the input processing somehow
+		ImGui::End();
+		ImGui::PopStyleVar();
 
 		//if (gui_show_map_data) gui_MapData();
 		//if (gui_show_data_viewer) gui_loaded_data();
