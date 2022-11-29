@@ -103,7 +103,8 @@ Mesh *MeshBuilder::Finish()
 MeshSection::MeshSection(unsigned int vertex_count, float *data, GLenum primative_type, CTexture *texture, glm::vec2 uvScroll, int pass, PMO_MESH_HEADER* raw)
 {
 	this->vert_count = vertex_count;
-	vert_data = (float *)malloc(vertex_count * 10 * sizeof(float));
+	//vert_data = (float *)malloc(vertex_count * 10 * sizeof(float));
+	vert_data = new float[vertex_count * 10];
 	memcpy(vert_data, data, vertex_count * 10 * sizeof(float));
 	this->draw_primative = primative_type;
 	this->texture = texture;
@@ -118,7 +119,7 @@ MeshSection::MeshSection(unsigned int vertex_count, float *data, GLenum primativ
 
 MeshSection::~MeshSection()
 {
-	free(vert_data);
+	delete[] vert_data;
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
 }

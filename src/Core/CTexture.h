@@ -15,6 +15,12 @@ public:
 	CTexture(uint32_t width, uint32_t height, uint8_t *data, PixelFormat format, void* userPtr = nullptr);
 	virtual ~CTexture();
 
+	CTexture(const CTexture& other) = delete;
+	CTexture& operator=(const CTexture& other) = delete;
+
+	CTexture(CTexture&& other) noexcept;
+	CTexture& operator=(CTexture&& other) noexcept;
+
 	void ogl_loadIfNeeded();
 	void ogl_unload();
 

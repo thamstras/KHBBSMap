@@ -145,7 +145,7 @@ void DebugDraw::Update(float deltaTime, double worldTime)
 {
 	// TODO: WE DON'T RESUBMIT DEBUG OBJECTS TO THE DRAW LIST!
 	// This isn't a problem right now because no object lives more than 1 frame but still.
-	for (int i = 0; i < activeDebugObjects.size(); i++)
+	for (int i = 0; i < (int)activeDebugObjects.size(); i++)
 	{
 		CDebugObject* obj = activeDebugObjects[i];
 		if (obj->updateLifetime(deltaTime) < 0.0f)

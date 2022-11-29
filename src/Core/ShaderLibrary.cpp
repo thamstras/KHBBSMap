@@ -35,7 +35,7 @@ bool ShaderLibrary::IsShaderAvailible(std::string& name)
 	return true;
 }
 
-std::shared_ptr<CShader> ShaderLibrary::GetShader(std::string& name)
+std::shared_ptr<CShader> ShaderLibrary::GetShader(const std::string& name)
 {
 	auto itr = m_shaderMap.find(name);
 	if (itr == m_shaderMap.end())

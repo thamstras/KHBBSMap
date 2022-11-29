@@ -27,8 +27,8 @@
 [X] Fix DP_02
 [/] Rewrite input system so the new viewport works properly (almost there)
 [X] Get multisampling implimented in new viewport
-[ ] Move imgui to docking branch
-[ ] Write new GUI stuff
+[X] Move imgui to docking branch
+[X] Write new GUI stuff
 [ ] Save As PMP
 [ ] Import/Export PMO
 [ ] Export FBX
@@ -64,7 +64,7 @@ const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
 const bool USE_ANTIALIASING = true;
-const bool USE_ANISOTROPIC = false;
+const bool USE_ANISOTROPIC = true;
 
 const float MAX_DELTA_TIME = 0.2f;
 
@@ -196,6 +196,7 @@ bool init(FileManager& fileManager)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
 	//glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 	if (USE_ANTIALIASING) glfwWindowHint(GLFW_SAMPLES, 4);
 
@@ -208,7 +209,7 @@ bool init(FileManager& fileManager)
 		return false;
 	}
 	glfwMakeContextCurrent(window);
-	glfwSwapInterval(1);
+	glfwSwapInterval(0);
 
 	if (glfwRawMouseMotionSupported()) g_mouse.rawMotionAvailible = true;
 
@@ -265,7 +266,7 @@ bool init(FileManager& fileManager)
 	io.ConfigWindowsResizeFromEdges = true;
 	//ImGui::StyleColorsDark();
 	ImGui::StyleColorsLight();
-	ImGui::GetStyle().ColorButtonPosition = ImGuiDir_Left;
+	ImGui::GetStyle().ColorButtonPosition = ImGuiDir_Right;
 	ImGui::GetStyle().FrameBorderSize = 1.0f;
 	ImGui::GetStyle().WindowRounding = 7.0f;
 	ImGui_ImplGlfw_InitForOpenGL(g_window.window, true);
@@ -613,13 +614,18 @@ void gui_draw(FileManager& fileManager)
 
 	gui_DrawSysInfo();
 	//if (gui_show_map_data) gui_MapData();
-	if (g_theScene) g_theScene->GUI();
+	if (g_theScene)
+	{
+		g_theScene->GUI();
+		gui_DrawRenderGui(g_theScene->renderContext);
+		gui_DrawEnvGui(fileManager, g_theScene->renderContext);
+		if (gui_show_debug_tool) gui_DrawDebugGui(g_theScene->renderContext);
+	}
 	//if (gui_show_data_viewer) gui_loaded_data();
-	if (gui_show_debug_tool) gui_DrawDebugGui(g_theScene->renderContext);
+	
 	//gui_tex_view();
 
-	gui_DrawRenderGui(g_theScene->renderContext);
-	gui_DrawEnvGui(fileManager, g_theScene->renderContext);
+	
 
 	//ImGui::ShowDemoWindow();
 }

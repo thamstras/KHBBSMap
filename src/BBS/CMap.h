@@ -53,6 +53,9 @@ namespace BBS
 	protected:
 		CMap* parent;
 	public:
+		unsigned int instanceIdx;
+		bool isSelected;
+		
 		glm::vec3 position;
 		glm::vec3 rotation;
 		glm::vec3 scale;
@@ -62,7 +65,7 @@ namespace BBS
 
 		CModelObject* model;
 
-		CMapInstance(CMap* map, PmpInstance& inst);
+		CMapInstance(CMap* map, PmpInstance& inst, unsigned int idx);
 		void Update(float deltaTime, double worldTime);
 
 		bool BBox(CCamera* cam, glm::mat4 projMatrix);

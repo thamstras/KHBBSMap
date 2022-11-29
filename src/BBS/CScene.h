@@ -15,6 +15,8 @@ namespace BBS
 		
 		CMapInstance* pSelectedInstance = nullptr;
 
+		void SelectInstance(int idx);
+
 	public:
 		CMap* theMap;	// All the map geometry. PMP
 

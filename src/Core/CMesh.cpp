@@ -13,7 +13,7 @@ CMesh::CMesh()
 	VBO = 0;
 	Pos = glm::vec3(0.0f);
 	Rot = glm::vec3(0.0f);
-	Scale = glm::vec3(0.0f);
+	Scale = glm::vec3(1.0f);
 }
 
 CMesh::~CMesh()
@@ -76,7 +76,9 @@ void CMesh::Draw(RenderContext& context)
 
 std::shared_ptr<CShader> CMesh::SelectShader(RenderContext& context)
 {
-	if (context.render.no_texture)
+	if (context.debug.highlight)
+		return context.render.shaderLibrary->GetShader(context.render.highlight_shader);
+	else if (context.render.no_texture)
 		return context.render.shaderLibrary->GetShader(context.render.textureless_shader);
 	else
 		return context.render.shaderLibrary->GetShader(context.render.default_shader);
@@ -108,7 +110,7 @@ void CMesh::Draw(RenderContext& context, const glm::vec3& position, const glm::v
 		shader->setMat4("view"s, context.render.viewMatrix);	
 	shader->setMat4("projection"s, context.render.projectionMatrix);
 
-	for (int i = 0; i < textures.size(); i++)
+	for (int i = 0; i < (int)textures.size(); i++)
 	{
 		glActiveTexture(GL_TEXTURE0 + i);
 		textures[i]->ogl_loadIfNeeded();

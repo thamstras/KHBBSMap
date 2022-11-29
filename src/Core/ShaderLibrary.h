@@ -19,7 +19,7 @@ public:
 
 	bool AddShader(ShaderDef& shaderDef);
 	bool IsShaderAvailible(std::string& name);
-	std::shared_ptr<CShader> GetShader(std::string& name);
+	std::shared_ptr<CShader> GetShader(const std::string& name);
 private:
 	std::map<std::string, std::shared_ptr<CShader>> m_shaderMap;
 };

@@ -13,11 +13,16 @@ size_t PixelFormatSize(PixelFormat pf)
 
 CTexture::CTexture(uint32_t width, uint32_t height, uint8_t *data, PixelFormat format, void* userPtr)
 {
+	if (width == 0 || height == 0 || data == nullptr)
+		throw std::exception("Tried to create invalid texture");
+
 	this->width = width;
 	this->height = height;
 	int pxSiz = PixelFormatSize(format);
 	int rowLen = width * pxSiz;
-	this->data = (uint8_t *)malloc(width * height * pxSiz);
+	//this->data = (uint8_t *)malloc(width * height * pxSiz);
+	this->data = new uint8_t[width * height * pxSiz];
+
 	for (int y = 0; y < height; y++)
 	{
 		for (int x = 0; x < width; x++)
@@ -37,7 +42,32 @@ CTexture::CTexture(uint32_t width, uint32_t height, uint8_t *data, PixelFormat f
 
 CTexture::~CTexture()
 {
-	free(this->data);
+	if (ogl_loaded) ogl_unload();
+	delete[] this->data;
+}
+
+CTexture::CTexture(CTexture&& other) noexcept :
+	width(std::exchange(other.width, 0)), height(std::exchange(other.height, 0)),
+	data(std::exchange(other.data, nullptr)),
+	ogl_texid(std::exchange(other.ogl_texid, 0)), ogl_loaded(std::exchange(other.ogl_loaded, false)),
+	userPtr(std::exchange(other.userPtr, nullptr))
+{}
+
+CTexture& CTexture::operator=(CTexture&& other) noexcept
+{
+	if (this == &other)
+		return *this;
+
+	if (ogl_loaded) ogl_unload();
+	free(data);
+
+	width = std::exchange(other.width, 0);
+	height = std::exchange(other.height, 0);
+	data = std::exchange(other.data, nullptr);
+	ogl_texid = std::exchange(other.ogl_texid, 0);
+	ogl_loaded = std::exchange(other.ogl_loaded, false);
+
+	return *this;
 }
 
 void CTexture::ogl_loadIfNeeded()

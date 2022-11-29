@@ -11,12 +11,20 @@ class CFramebuffer
 	GLuint FBO2, RBO2;
 	GLuint multiSampleBuffer;
 
+	void ReleaseResources();
+
 public:
 	CFramebuffer(GLuint width, GLuint height, int samples = 1);
 	~CFramebuffer();
 
-	GLuint Width();
-	GLuint Height();
+	CFramebuffer(const CFramebuffer& other) = delete;
+	CFramebuffer& operator=(const CFramebuffer& other) = delete;
+
+	CFramebuffer(CFramebuffer&& other) noexcept;
+	CFramebuffer& operator=(CFramebuffer&& other) noexcept;
+
+	GLuint Width() const;
+	GLuint Height() const;
 
 	void Bind();
 	GLuint ResolveTexture();

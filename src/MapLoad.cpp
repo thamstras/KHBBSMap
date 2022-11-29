@@ -656,7 +656,8 @@ void LoadMapTextures()
 		uint32 rem = (psWidth - width) << 2;
 
 		//uint8 *tempImage = (uint8 *)rapi->Noesis_UnpooledAlloc(psWidth * psHeight * 4);
-		uint8 *tempImage = (uint8 *)malloc(psWidth * psHeight * 4);
+		//uint8 *tempImage = (uint8 *)malloc(psWidth * psHeight * 4);
+		uint8* tempImage = new uint8[psWidth * psHeight * 4];
 		uint8 *dstPixel = tempImage;
 
 		if (psWidth == 0 || psHeight == 0 || width == 0 || height == 0) continue;
@@ -797,7 +798,7 @@ void LoadMapTextures()
 
 		CTexture *actualTexture = new CTexture(psWidth, psHeight, tempImage, PF_RGBA32, tex_entry.second);
 		render_textures.emplace(tex_entry.first, actualTexture);
-		free(tempImage);
+		delete[] tempImage;
 	}
 }
 
@@ -878,6 +879,12 @@ void LoadBBSMap(std::string filepath)
 	fseek(fp, 0, SEEK_END);
 	long fsize = ftell(fp);
 	rewind(fp);
+
+	if (fsize <= 0)
+	{
+		std::cerr << "Empty map file" << std::endl;
+		return;
+	}
 
 	filebuffer = (char *)malloc(sizeof(char) * fsize);
 	if (filebuffer == nullptr)

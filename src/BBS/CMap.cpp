@@ -32,6 +32,7 @@ void CMap::LoadMapFile(std::string filePath)
 
 	// TODO: this->objects would be better as some kind of sparse array
 	// Create instances, loading the actual models as we go
+	unsigned int instIdx = 0;
 	for (PmpInstance& inst : pmpFile.instances)
 	{
 		if (inst.offset != 0)
@@ -48,7 +49,7 @@ void CMap::LoadMapFile(std::string filePath)
 			}
 		}
 
-		CMapInstance* mapInstance = new CMapInstance(this, inst);
+		CMapInstance* mapInstance = new CMapInstance(this, inst, instIdx++);
 		this->instances.push_back(mapInstance);
 	}
 	int trueObjectCount = std::count_if(std::begin(objects), std::end(objects), [](CModelObject* obj) { return obj != nullptr; });
@@ -151,10 +152,9 @@ void CMap::Clear()
 	textures.clear();
 }
 
-CMapInstance::CMapInstance(CMap* map, PmpInstance& inst)
-	: boundingBox(glm::vec3(0.0f), glm::vec3(0.0f))
+CMapInstance::CMapInstance(CMap* map, PmpInstance& inst, unsigned int idx)
+	: boundingBox(glm::vec3(0.0f), glm::vec3(0.0f)), instanceIdx(idx), isSelected(false), parent(map)
 {
-	this->parent = map;
 	this->position = glm::vec3(inst.loc[0], inst.loc[1], inst.loc[2]);
 	this->rotation = glm::vec3(inst.rot[0], inst.rot[1], inst.rot[2]);
 	this->scale = glm::vec3(inst.scale[0], inst.scale[1], inst.scale[2]);
@@ -167,8 +167,14 @@ CMapInstance::CMapInstance(CMap* map, PmpInstance& inst)
 
 void CMapInstance::DoDraw(RenderContext& render)
 {
+	if (isSelected)
+		render.debug.highlight = true;
+	
 	if (model)
 		model->DoDraw(render, position, rotation, scale);
+
+	if (isSelected)
+		render.debug.highlight = false;
 }
 
 float CMapInstance::CalcZ(const RenderContext& context) const

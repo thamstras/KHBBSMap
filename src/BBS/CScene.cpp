@@ -1,6 +1,7 @@
 #include "CScene.h"
 #include <algorithm>
 #include <format>
+#include "PMP.h"
 
 using namespace BBS;
 
@@ -75,37 +76,39 @@ void CScene::Tick(float deltaTime, double worldTime)
 
 void CScene::Draw()
 {
+	auto comp = [this](CRenderObject* const &a, CRenderObject* const &b) {
+		return a->	CalcZ(renderContext) > b->CalcZ(renderContext);
+	};
+
 	// TODO: Cap z depth to far clip. (or maybe 2x far clip)
 	// Not sure how much it'll help for most maps (Other than rumble racing) but
 	// probably a good idea none the less.
 	
 	glDisable(GL_DEPTH_TEST);
 	renderContext.render.currentPass = LAYER_SKY;
-	for (CRenderObject* renderObject : renderContext.render.skyDrawList)
+	for (CRenderObject* const& renderObject : renderContext.render.skyDrawList)
 		renderObject->DoDraw(renderContext);
 	glEnable(GL_DEPTH_TEST);
 
 	renderContext.render.currentPass = LAYER_STATIC;
-	std::sort(std::begin(renderContext.render.staticDrawList), std::end(renderContext.render.staticDrawList),
-		[this](CRenderObject* a, CRenderObject* b) {return a->CalcZ(renderContext) < b->CalcZ(renderContext); });
-	for (CRenderObject* renderObject : renderContext.render.staticDrawList)
+	std::sort(renderContext.render.staticDrawList.begin(), renderContext.render.staticDrawList.end(), comp);
+	for (CRenderObject* const& renderObject : renderContext.render.staticDrawList)
 		renderObject->DoDraw(renderContext);
 
 	glDepthMask(GL_FALSE);
 	renderContext.render.currentPass = LAYER_DYNAMIC;
-	std::sort(std::begin(renderContext.render.dynamicDrawList), std::end(renderContext.render.dynamicDrawList),
-		[this](CRenderObject* a, CRenderObject* b) {return a->CalcZ(renderContext) > b->CalcZ(renderContext); });
-	for (CRenderObject* renderObject : renderContext.render.dynamicDrawList)
+	std::sort(renderContext.render.dynamicDrawList.begin(), renderContext.render.dynamicDrawList.end(), comp);
+	for (CRenderObject* const &renderObject : renderContext.render.dynamicDrawList)
 		renderObject->DoDraw(renderContext);
 	
 	renderContext.render.currentPass = LAYER_OVERLAY;
-	for (CRenderObject* renderObject : renderContext.render.overlayDrawList)
+	for (CRenderObject* const& renderObject : renderContext.render.overlayDrawList)
 		renderObject->DoDraw(renderContext);
 	glDepthMask(GL_TRUE);
 
 	glDisable(GL_DEPTH_TEST);
 	renderContext.render.currentPass = LAYER_GUI;
-	for (CRenderObject* renderObject : renderContext.render.guiDrawList)
+	for (CRenderObject* const& renderObject : renderContext.render.guiDrawList)
 		renderObject->DoDraw(renderContext);
 	glEnable(GL_DEPTH_TEST);
 }
@@ -136,7 +139,7 @@ void CScene::ProcessMouse(float deltaX, float deltaY)
 
 void CScene::ProcessMouseScroll(double amount)
 {
-	camera.ProcessMouseScroll(amount);
+	camera.ProcessMouseScroll((float)amount);
 }
 
 void CScene::StartFrame()
@@ -187,32 +190,123 @@ void CScene::StartFrame()
 	renderContext.render.guiDrawList.clear();
 }
 
+void CScene::SelectInstance(int idx)
+{
+	// TODO: need a debug assert macro
+	if (idx >= (int)theMap->instances.size() || idx < -1)
+		throw std::exception("instance idx out of range");
+
+	if (pSelectedInstance)
+	{
+		pSelectedInstance->isSelected = false;
+		pSelectedInstance = nullptr;
+	}
+
+	if (idx != -1)
+	{
+		pSelectedInstance = theMap->instances[idx];
+		pSelectedInstance->isSelected = true;
+	}
+}
+
 void CScene::GUI()
 {
 	if (ImGui::Begin("Instances"))
 	{
-		if (ImGui::BeginListBox("Instances"))
+		if (ImGui::BeginListBox("##empty", ImVec2(-FLT_MIN, 0.0f)))
 		{
-			for each (CMapInstance * inst in theMap->instances)
+			for (CMapInstance * inst : theMap->instances)
 			{
-				std::string label = string_format("Inst { %.2f, %.2f, %.2f } [%d]", inst->position.x, inst->position.y, inst->position.z, inst->objectID);
-				if (ImGui::Selectable(label.c_str(),(pSelectedInstance == inst)))
-					pSelectedInstance = inst;
+				std::string label = string_format("Inst %d { %.2f, %.2f, %.2f } [%d]", inst->instanceIdx, inst->position.x, inst->position.y, inst->position.z, inst->objectID);
+				if (ImGui::Selectable(label.c_str(), (pSelectedInstance == inst)))
+				{
+					SelectInstance(inst->instanceIdx);
+				}
 			}
 			ImGui::EndListBox();
+		}
+		if (ImGui::Button("Add Instance"))
+		{
+			// TODO
+		}
+		if (pSelectedInstance)
+		{
+			ImGui::SameLine();
+			if (ImGui::Button("Deselect"))
+			{
+				SelectInstance(-1);
+			}
 		}
 		ImGui::Separator();
 		ImGui::Text("Selected Instance");
 		if (pSelectedInstance)
 		{
+			ImGui::Text("Instance ID: %d", pSelectedInstance->instanceIdx);
 			ImGui::Text("Location: {%2.f, %2.f, %2.f}", pSelectedInstance->position[0], pSelectedInstance->position[1], pSelectedInstance->position[2]);
 			ImGui::Text("Rotation: {%2.f, %2.f, %2.f}", pSelectedInstance->rotation[0], pSelectedInstance->rotation[1], pSelectedInstance->rotation[2]);
 			ImGui::Text("Scale:    {%2.f, %2.f, %2.f}", pSelectedInstance->scale[0], pSelectedInstance->scale[1], pSelectedInstance->scale[2]);
+			ImGui::Text("Flags:    0x%04X", pSelectedInstance->flags);
+			ImGui::Text("Model ID: %d", pSelectedInstance->objectID);
+			ImGui::Button("Select Model");
+			ImGui::Text("####EXPERIMENT####");
+			if (!(pSelectedInstance->flags & INSTANCE_FLAGS::FLAG_SKYBOX))
+			{
+				ImGui::DragFloat3("Location", glm::value_ptr(pSelectedInstance->position), 0.1f);
+			}
 		}
 		else
 		{
 			ImGui::Text("None");
 		}
+	}
+	ImGui::End();
+
+	if (ImGui::Begin("Models"))
+	{
+		if (ImGui::BeginListBox("##empty", ImVec2(-FLT_MIN, 0.0f)))
+		{
+			for (int i = 0; i < (int)theMap->objects.size(); i++)
+			{
+				if (theMap->objects[i] == nullptr)
+				{
+					std::string label = string_format("%d Empty Slot", i);
+					ImGui::Selectable(label.c_str(), false);
+				}
+				else
+				{
+					CModelObject* pObject = theMap->objects[i];
+					std::string label = string_format("Model %d: Sections %d/%d Scale %2.f Textures %d", i, pObject->sections.size(), pObject->transSections.size(), pObject->scale, pObject->textureNames.size());
+					ImGui::Selectable(label.c_str(), false);
+				}
+			}
+			ImGui::EndListBox();
+		}
+		if (ImGui::Button("Add Model Slot"))
+		{
+			// TODO
+			//theMap->objects.push_back(nullptr);
+		}
+		ImGui::Separator();
+		ImGui::Text("Selected Model");
+		ImGui::Text("NYI");
+	}
+	ImGui::End();
+
+	if (ImGui::Begin("Collision"))
+	{
+		static bool visible = true;
+		static float opacity = 0.5f;
+		ImGui::Checkbox("Show in viewport", &visible);
+		ImGui::SliderFloat("Opacity", &opacity, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::Text("Collision Sets Loaded: 0");
+		ImGui::Text("Verts: 0");
+		ImGui::Text("Faces: 0");
+		ImGui::Text("Grid:");
+		ImGui::Text("  Extents X: 0.0 -> 0.0");
+		ImGui::Text("  Extents Y: 0.0 -> 0.0");
+		ImGui::Text("  Extents Z: 0.0 -> 0.0");
+		ImGui::Text("  Cell Size: 0.0");
+		ImGui::Text("  Cells: 0, 0, 0");
 	}
 	ImGui::End();
 }
