@@ -1,5 +1,6 @@
 oldsrc/
 imgui-master/
+imgui_std/
 *.pmp
 imgui.ini
 resources/export/

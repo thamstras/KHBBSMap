@@ -109,4 +109,6 @@ struct RenderContext
 		unsigned int draw_calls;
 		unsigned int tris_drawn;
 	} stats;
+
+	void AddToDrawList(ERenderLayer pass, CRenderObject* obj);
 };
