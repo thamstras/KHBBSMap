@@ -36,7 +36,7 @@ private:
 
 public:
 	CMesh();
-	virtual ~CMesh();
+	~CMesh();
 	void Build();
 	void UnBuild();
 

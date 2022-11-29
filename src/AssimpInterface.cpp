@@ -18,22 +18,22 @@ aiSceneWrapper::aiSceneWrapper()
 aiSceneWrapper::~aiSceneWrapper()
 {
 	mRootNode = nullptr;
-	for (auto& itr = mAllNodes.begin(); itr < mAllNodes.end(); itr++)
+	for (auto& itr : mAllNodes)
 	{
-		delete* itr;
-		*itr = nullptr;
+		delete itr;
+		itr = nullptr;
 	}
 	mAllNodes.clear();
-	for (auto& itr = mMeshes.begin(); itr < mMeshes.end(); itr++)
+	for (auto& itr : mMeshes)
 	{
-		delete* itr;
-		*itr = nullptr;
+		delete itr;
+		itr = nullptr;
 	}
 	mMeshes.clear();
-	for (auto& itr = mMaterials.begin(); itr < mMaterials.end(); itr++)
+	for (auto& itr : mMaterials)
 	{
-		delete* itr;
-		*itr = nullptr;
+		delete itr;
+		itr = nullptr;
 	}
 	mMaterials.clear();
 }

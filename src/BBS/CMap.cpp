@@ -66,7 +66,7 @@ void CMap::LoadMapFile(std::string filePath)
 	std::cout << "[MAP] Loaded " << textures.size() << " textures" << std::endl;
 
 	// Give the models their textures
-	for each (CModelObject * model in this->objects)
+	for (CModelObject * model : this->objects)
 	{
 		if (model != nullptr)
 		{
@@ -171,7 +171,7 @@ void CMapInstance::DoDraw(RenderContext& render)
 		model->DoDraw(render, position, rotation, scale);
 }
 
-float CMapInstance::CalcZ(RenderContext& context)
+float CMapInstance::CalcZ(const RenderContext& context) const
 {
 	return glm::dot(this->position - context.render.current_camera->Position, context.render.current_camera->Front);
 }

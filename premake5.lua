@@ -1,5 +1,5 @@
 
--- NOTE: Requires at least Premake5 alpha 15 for ccpdialect and vs2019 support.
+-- NOTE: Requires at least Premake5 beta 1 for ccpdialect and vs2022 support.
 
  -- NOTE: I built GLFW and ASSIMP from source. If you're using a binary distribution you may need to change some paths down below.
 GLFW_PATH = "C:/Repos/Libraries/glfw/3.3-dll/"
@@ -16,9 +16,9 @@ workspace "KHBBSMap"
     project "KHBBSMap"
         kind "ConsoleApp"
         language "C++"
-		cppdialect "C++17"  -- Needed for proper <filesystem> support.
+		cppdialect "C++20"  -- Needed for proper <filesystem> and std::format support.
         system "Windows" 
-        architecture "x32"
+        architecture "x32"  -- TODO: 64 bit would be faster? Would it screw up serialization though?
 		vpaths {
 			["Source/*"] = { "src/**.h", "src/**.c", "src/**.hpp", "src/**.cpp" },
             ["Shaders"] = { "**.glsl", "**.vert", "**.frag" },
@@ -28,8 +28,7 @@ workspace "KHBBSMap"
 		files { "src/**", "resources/shaders/**", "imgui/**" }
 		includedirs({"./src", "./imgui"})
         flags {"NoPCH"}  -- TODO: Check to see if more flags are needed.
-		buildoptions { "/Zc:__cplusplus" }
-        --targetdir "bin"
+		buildoptions { "/Zc:__cplusplus" }  -- Needed because MSVC's compiler is weird
         --debugdir "./" -- TODO: This doesn't give the right results and the .user file overrides it once generated.
                         --       Also, now rendered irrelevent by the new FileManager search functionality.
 		

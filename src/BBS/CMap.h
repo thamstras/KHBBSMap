@@ -47,8 +47,8 @@ namespace BBS
 	class CMapInstance : public CRenderObject
 	{
 		//CRenderObject
-		virtual void DoDraw(RenderContext& context);
-		virtual float CalcZ(RenderContext& context);
+		virtual void DoDraw(RenderContext& context) override;
+		virtual float CalcZ(const RenderContext& context) const override;
 
 	protected:
 		CMap* parent;

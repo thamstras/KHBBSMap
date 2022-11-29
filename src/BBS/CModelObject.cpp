@@ -131,7 +131,7 @@ CMesh* CModelObject::BuildMesh(std::vector<CModelSection*>& sections)
 	mesh->vertCount = totalVcount;
 	mesh->vertData.reserve(10 * totalVcount);
 
-	for each (CModelSection * modelSection in sections)
+	for (CModelSection * modelSection : sections)
 	{
 		CMeshSection meshSection;
 		meshSection.vertCount = modelSection->vertexCount;
@@ -140,7 +140,7 @@ CMesh* CModelObject::BuildMesh(std::vector<CModelSection*>& sections)
 		meshSection.stride = (10 * sizeof(float));
 		meshSection.twoSided = modelSection->attributes & ATTR_BACK;
 		meshSection.blend = modelSection->attributes & ATTR_BLEND_MASK;
-		for each (uint16 kick in modelSection->primCount)
+		for (uint16 kick : modelSection->primCount)
 		{
 			meshSection.kickList.push_back((unsigned int)kick);
 		}

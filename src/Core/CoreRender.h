@@ -48,7 +48,7 @@ public:
 	virtual ~CRenderObject();
 
 	virtual void DoDraw(RenderContext& context) = 0;
-	virtual float CalcZ(RenderContext& context) = 0;
+	virtual float CalcZ(const RenderContext& context) const = 0;
 };
 
 struct RenderContext

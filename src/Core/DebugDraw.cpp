@@ -33,7 +33,7 @@ public:
 	glm::vec3 pos, rot, scale, col;
 
 	virtual void DoDraw(RenderContext& context) override;
-	virtual float CalcZ(RenderContext& context) override;
+	virtual float CalcZ(const RenderContext& context) const override;
 };
 
 std::vector<CDebugObject*> DebugDraw::activeDebugObjects;
@@ -121,7 +121,7 @@ void CDebugCube::DoDraw(RenderContext& context)
 	context.stats.tris_drawn += 24;	// 12 lines, 2 tris per line
 }
 
-float CDebugCube::CalcZ(RenderContext& context)
+float CDebugCube::CalcZ(const RenderContext& context) const
 {
 	return glm::dot(this->pos - context.render.current_camera->Position, context.render.current_camera->Front);
 }
@@ -129,11 +129,11 @@ float CDebugCube::CalcZ(RenderContext& context)
 void DebugDraw::AddDebugObject(CDebugObject* obj)
 {
 	// try find an empty slot first
-	for (auto& itr = activeDebugObjects.begin(); itr != activeDebugObjects.end(); ++itr)
+	for (auto& itr : activeDebugObjects)
 	{
-		if (*itr == nullptr)
+		if (itr == nullptr)
 		{
-			*itr = obj;
+			itr = obj;
 			return;
 		}
 	}

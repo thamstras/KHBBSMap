@@ -142,7 +142,7 @@ void CMesh::Draw(RenderContext& context, const glm::vec3& position, const glm::v
 		if (section.blend && !context.render.no_blend) glEnable(GL_BLEND);
 		else glDisable(GL_BLEND);
 
-		for each (auto kick in section.kickList)
+		for (auto kick : section.kickList)
 		{
 			if (kick == 0) continue;
 			glDrawArrays(section.primType, secBase, kick);
