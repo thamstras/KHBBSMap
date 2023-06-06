@@ -3,6 +3,7 @@
 #include "Texture.h"
 #include "Mesh.h"
 #include <map>
+#include <assimp/Exporter.hpp>
 #include <assimp/scene.h>
 
 class aiSceneWrapper
@@ -32,8 +33,18 @@ public:
 	std::vector<aiFace> mFaces;
 	std::vector<aiVector3D> mTextureCoords;
 	unsigned int mMaterialIndex;
+	std::string name;
 
 	aiMesh* Finish();
+};
+
+struct ExportFormat
+{
+	std::string id;
+	std::string desc;
+	std::string ext;
+
+	ExportFormat(const aiExportFormatDesc* desc);
 };
 
 class AssimpExporter
@@ -48,7 +59,9 @@ public:
 
 	void AddMesh(Mesh* mesh);
 
-	void EndExport(std::string folderPath, std::string mapname);
+	void EndExport(std::string folderPath, std::string mapname, ExportFormat format);
+
+	static std::vector<ExportFormat> GetExportOptions();
 
 private:
 	// Call AddMesh instead

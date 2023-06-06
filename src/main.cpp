@@ -12,6 +12,8 @@
 #include "MapLoad.h"
 #include "Render.h"
 #include "glm/gtc/type_ptr.hpp"
+#include <AssimpInterface.h>
+#include <optional>
 
 // #### STRUCTS ####
 struct MouseData
@@ -317,10 +319,29 @@ bool export_option = false;
 bool export_skybox_normal = true;
 bool export_skybox_scaled = false;
 
+std::vector<ExportFormat> exportFormats;
+bool gotFormats = false;
+std::optional<ExportFormat> currFormat;
+char pathBuf[260] = ".\\resources\\export";
+
 void gui_DrawExportOptions(FileManager& filemanager)
 {
 	if (ImGui::BeginPopupModal("ExportModal"))
 	{
+		if (!gotFormats)
+		{
+			exportFormats = AssimpExporter::GetExportOptions();
+			gotFormats = true;
+			for (auto& format : exportFormats)
+			{
+				if (format.id == "fbx")
+				{
+					currFormat = format;
+					break;
+				}
+			}
+		}
+
 		ImGui::Text("Export Options");
 
 		ImGui::Separator();
@@ -334,7 +355,20 @@ void gui_DrawExportOptions(FileManager& filemanager)
 
 		ImGui::Separator();
 
-		ImGui::Text("Will export to .\\resources\\export");
+		ImGui::InputText("Folder", pathBuf, 260);
+		ImGui::Text("Will append map name to path");
+
+		ImGui::Separator();
+
+		if (ImGui::BeginCombo("Format", currFormat->id.c_str()))
+		{
+			for (auto& format : exportFormats)
+			{
+				if (ImGui::Selectable(format.desc.c_str(), currFormat->id == format.id))
+					currFormat = format;
+			}
+			ImGui::EndCombo();
+		}
 
 		ImGui::Separator();
 
@@ -346,11 +380,12 @@ void gui_DrawExportOptions(FileManager& filemanager)
 		if (ImGui::Button("Export"))
 		{
 			ImGui::CloseCurrentPopup();
-			std::string fs;
-			if (filemanager.GetExportFolder(fs))
-			{
-				ExportMap(fs);
-			}
+			//std::string fs;
+			//if (filemanager.GetExportFolder(fs))
+			//{
+			//	ExportMap(fs);
+			//}
+			ExportMap(std::string(pathBuf), *currFormat);
 		}
 
 		ImGui::EndPopup();

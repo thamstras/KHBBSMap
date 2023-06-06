@@ -97,6 +97,8 @@ aiMesh* aiMeshWrapper::Finish()
 	mesh->mTextureCoords[0] = new aiVector3D[mesh->mNumVertices];
 	for (int i = 0; i < mesh->mNumVertices; i++) { mesh->mTextureCoords[0][i] = mTextureCoords[i]; }
 
+	mesh->mName = aiString(name);
+
 	return mesh;
 }
 
@@ -144,6 +146,7 @@ void AssimpExporter::AddTexture(std::string name, Texture* texture)
 void AssimpExporter::AddMesh(Mesh* mesh)
 {
 	aiNode* node = new aiNode();
+	node->mName = aiString(std::to_string(mesh->mesh_idx));
 
 	/*glm::quat rot = glm::quat(mesh->rotation);
 	aiVector3D position = aiVector3D(mesh->position.x, mesh->position.y, mesh->position.z);
@@ -177,6 +180,7 @@ void AssimpExporter::AddMesh(Mesh* mesh)
 unsigned int AssimpExporter::AddSection(MeshSection* section, Mesh* parent)
 {
 	aiMeshWrapper mesh;
+	mesh.name = std::to_string(parent->mesh_idx);
 
 	uint8 local_tex_id = section->raw->textureID;
 	if (local_tex_id != 0xFF)
@@ -201,7 +205,7 @@ unsigned int AssimpExporter::AddSection(MeshSection* section, Mesh* parent)
 			r = section->vert_data[fptr++];	g = section->vert_data[fptr++];	b = section->vert_data[fptr++];	a = section->vert_data[fptr++];
 			u = section->vert_data[fptr++];	v = section->vert_data[fptr++];
 			mesh.mVertices.push_back(aiVector3D(x, y, z));
-			mesh.mColors.push_back(aiColor4D(r, g, b, a));
+			mesh.mColors.push_back(aiColor4D(r / 2.0f, g / 2.0f, b / 2.0f, a));
 			mesh.mTextureCoords.push_back(aiVector3D(u, v, 0.0f));
 		}
 		fcount = section->vert_count / 3;
@@ -229,7 +233,7 @@ unsigned int AssimpExporter::AddSection(MeshSection* section, Mesh* parent)
 				r = section->vert_data[fptr++];	g = section->vert_data[fptr++];	b = section->vert_data[fptr++];	a = section->vert_data[fptr++];
 				u = section->vert_data[fptr++];	v = section->vert_data[fptr++];
 				mesh.mVertices.push_back(aiVector3D(x, y, z));
-				mesh.mColors.push_back(aiColor4D(r, g, b, a));
+				mesh.mColors.push_back(aiColor4D(r / 2.0f, g / 2.0f, b / 2.0f, a));
 				mesh.mTextureCoords.push_back(aiVector3D(u, v, 0.0f));
 			}
 		}
@@ -262,9 +266,11 @@ unsigned int AssimpExporter::AddSection(MeshSection* section, Mesh* parent)
 	return res;
 }
 
-void AssimpExporter::EndExport(std::string folderPath, std::string mapname)
+void AssimpExporter::EndExport(std::string folderPath, std::string mapname, ExportFormat format)
 {
 	std::filesystem::path exportFolder = std::filesystem::path(folderPath);
+	exportFolder.append(mapname);
+	exportFolder.replace_extension("");
 
 	if (std::filesystem::exists(exportFolder))
 	{
@@ -309,6 +315,10 @@ void AssimpExporter::EndExport(std::string folderPath, std::string mapname)
 		aiMaterial* mat = new aiMaterial();
 		mat->AddProperty(&aiName, AI_MATKEY_NAME);
 		mat->AddProperty(&filename, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));
+		int shadingMode = aiShadingMode_NoShading;
+		int texFlags = aiTextureFlags_IgnoreAlpha;
+		mat->AddProperty(&shadingMode, 1, AI_MATKEY_SHADING_MODEL);
+		mat->AddProperty(&texFlags, 1, AI_MATKEY_TEXFLAGS(aiTextureType_DIFFUSE, 0));
 		scene->mMaterials.push_back(mat);
 		
 		// Step 2: Write out texture
@@ -326,15 +336,38 @@ void AssimpExporter::EndExport(std::string folderPath, std::string mapname)
 	aiScene* finalScene = scene->Finish();
 
 	// Step 4: Export scene
+	Assimp::Exporter exp = Assimp::Exporter();
+
 	std::filesystem::path outFile = exportFolder;
 	outFile.append(mapname);
-	outFile.replace_extension(".fbx");
+	outFile.replace_extension(format.ext);
 
-	Assimp::Exporter exp = Assimp::Exporter();
-	if (AI_SUCCESS != exp.Export(finalScene, "fbx", outFile.string(), aiPostProcessSteps::aiProcess_FlipUVs))
+	if (AI_SUCCESS != exp.Export(finalScene, format.id, outFile.string(), aiPostProcessSteps::aiProcess_FlipUVs))
 	{
 		std::cerr << "[Export] Failed to export fbx file!" << std::endl;
+		std::cerr << "[Export] " << exp.GetErrorString() << std::endl;
 	}
 
 	delete finalScene;
+}
+
+ExportFormat::ExportFormat(const aiExportFormatDesc* desc)
+{
+	this->id = std::string(desc->id);
+	this->desc = std::string(desc->description);
+	this->ext = std::string(desc->fileExtension);
+}
+
+std::vector<ExportFormat> AssimpExporter::GetExportOptions()
+{
+	Assimp::Exporter exp = Assimp::Exporter();
+	size_t formatCount = exp.GetExportFormatCount();
+	std::vector<ExportFormat> formats = std::vector<ExportFormat>();
+	for (int i = 0; i < formatCount; i++)
+	{
+		auto format = exp.GetExportFormatDescription(i);
+		formats.push_back(ExportFormat(format));
+	}
+
+	return formats;
 }

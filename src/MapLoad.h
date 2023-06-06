@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include "Render.h"
+#include "AssimpInterface.h"
 void UnloadBBSMap();
 void LoadBBSMap(std::string filepath);
 void ParseLoadedMap();
@@ -14,4 +15,4 @@ void gui_tex_view();
 unsigned int max_object_id();
 void gui_object_view(unsigned int object_id);
 
-void ExportMap(std::string folder);
+void ExportMap(std::string folder, ExportFormat format);

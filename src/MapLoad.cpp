@@ -929,7 +929,7 @@ void UnloadBBSMap()
 	g_fbuf = nullptr;
 }
 
-void ExportMap(std::string folder)
+void ExportMap(std::string folder, ExportFormat format)
 {
 	AssimpExporter exp;
 	exp.BeginExport();
@@ -941,5 +941,5 @@ void ExportMap(std::string folder)
 	{
 		exp.AddMesh(msh);
 	}
-	exp.EndExport(folder, mapname);
+	exp.EndExport(folder, mapname, format);
 }
