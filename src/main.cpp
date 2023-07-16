@@ -29,13 +29,15 @@
 [X] Get multisampling implimented in new viewport
 [X] Move imgui to docking branch
 [X] Write new GUI stuff
-[ ] Save As PMP
-[ ] Import/Export PMO
+[ ] GET THE TEXTURE VIEWER WORKING AGAIN
 [ ] Export FBX
 [ ] Texture overrides (probably going to need some kind of TextureManager.
 [ ] Load map file from command line
-[ ] Enable/Disable texture filtering + Framebuffer color depth at runtime (BBS<->PC mode)
 [ ] Load BCD
+[ ] Save As PMP
+[ ] Import/Export PMO
+[ ] Enable/Disable texture filtering + Framebuffer color depth at runtime (BBS<->PC mode)
+[ ] Resize viewport
 [ ] Load OLO (will need FileManager overhaul)
 
 */

@@ -41,7 +41,7 @@ NOTE: Attrib locations are "fixed" because we need to be able to bind the VAO wi
 	  after the shader has been selected.
 */
 
-enum class AttributeSemantic
+/*enum class AttributeSemantic
 {
 	Position,
 	Color,
@@ -76,7 +76,7 @@ struct NewShaderDef
 	std::string fragmentShaderPath;
 	std::vector<AttributeSemantic> AvailableAttributes;
 	std::vector<std::pair<UniformSemantic, std::string>> UniformMap;
-};
+};*/
 
 class CShader
 {

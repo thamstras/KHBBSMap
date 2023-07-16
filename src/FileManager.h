@@ -16,6 +16,10 @@ public:
 	bool OpenFileWindow(std::string& out_filePath);
 	bool GetExportFolder(std::string& out_path);
 
+	void SetBBSRoot(const std::string& root_path);
+	bool LoadBBSFile(const std::string& file);
+	void* GetBBSResource(const std::string& name);
+
 private:
 	std::filesystem::path rootPath;
 	std::filesystem::path resourcesPath;

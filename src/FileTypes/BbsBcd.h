@@ -2,6 +2,7 @@
 #include <vector>
 #include <fstream>
 #include <cstdint>
+#include "CmnTypes.h"
 
 struct BcdHeader
 {
@@ -27,7 +28,7 @@ struct BcdData
 	uint32_t bitArrayYOffset;
 	uint32_t bitArrayZOffset;
 
-	std::vector<FVECTOR3> verts;
+	std::vector<FVECTOR4> verts;
 	std::vector<BcdPlane> planes;
 	std::vector<ICOLOR> colors;
 };
@@ -40,6 +41,8 @@ struct BcdPlane
 	int32_t info;
 	uint32_t attrib;
 	uint32_t pad[2];
+
+	bool IsQuad();
 };
 
 class BcdFile
