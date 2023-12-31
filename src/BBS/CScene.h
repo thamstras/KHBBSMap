@@ -4,6 +4,7 @@
 #include "Core\CCamera.h"
 #include "Core\World.h"
 #include "CMap.h"
+#include "CCollision.h"
 #include "FileManager.h"
 
 namespace BBS
@@ -20,7 +21,7 @@ namespace BBS
 	public:
 		CMap* theMap;	// All the map geometry. PMP
 
-		//CCollision* theCollision	// BCD
+		CCollision* theCollision;	// BCD
 
 		//std::vector<CSpawnedObject*>	// OLO/PTX?
 

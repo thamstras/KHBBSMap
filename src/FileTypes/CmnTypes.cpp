@@ -7,6 +7,7 @@ FVECTOR3 ParseFVector3(std::ifstream& file)
 	v.x = ReadStream<float>(file);
 	v.y = ReadStream<float>(file);
 	v.z = ReadStream<float>(file);
+	return v;
 }
 
 FVECTOR4 ParseFVector4(std::ifstream& file)
@@ -16,6 +17,7 @@ FVECTOR4 ParseFVector4(std::ifstream& file)
 	v.y = ReadStream<float>(file);
 	v.z = ReadStream<float>(file);
 	v.w = ReadStream<float>(file);
+	return v;
 }
 
 ICOLOR ParseIColor(std::ifstream& file)
@@ -25,4 +27,5 @@ ICOLOR ParseIColor(std::ifstream& file)
 	v.g = ReadStream<uint8_t>(file);
 	v.b = ReadStream<uint8_t>(file);
 	v.a = ReadStream<uint8_t>(file);
+	return v;
 }

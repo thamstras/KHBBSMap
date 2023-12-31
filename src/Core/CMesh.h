@@ -1,6 +1,6 @@
 #pragma once
 #include "..\Common.h"
-#include "..\Core\CMesh.h"
+//#include "..\Core\CMesh.h"
 #include "..\Core\CTexture.h"
 #include "CoreRender.h"
 

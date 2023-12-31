@@ -51,8 +51,9 @@ BcdPlane ParseBcdPlane(std::ifstream& file)
 	ReadStreamArr<uint16_t>(file, plane.vertIdx, 4);
 	ReadStreamArr<uint16_t>(file, plane.colorIdx, 4);
 	plane.info = ReadStream<int32_t>(file);
-	plane.attrib = ReadStream<uint32_t>(file);
+	plane.attrib = std::bit_cast<ATTR_BIT>(ReadStream<uint32_t>(file));
 	ReadStreamArr<uint32_t>(file, plane.pad, 2);
+	return plane;
 }
 
 BcdFile BcdFile::ReadBcdFile(std::ifstream& file, std::streamoff base)

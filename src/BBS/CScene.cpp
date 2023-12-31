@@ -43,6 +43,11 @@ void CScene::Init(FileManager& fileManager)
 			"unlit_vcol",
 			fileManager.GetShaderPath("unlit_vcol.vert.glsl"),
 			fileManager.GetShaderPath("unlit_vcol.frag.glsl")
+		},
+		{
+			"unlit_vcol_alpha",
+			fileManager.GetShaderPath("unlit_vcol_alpha.vert.glsl"),
+			fileManager.GetShaderPath("unlit_vcol_alpha.frag.glsl")
 		}
 	};
 
@@ -70,6 +75,9 @@ void CScene::Tick(float deltaTime, double worldTime)
 	StartFrame();
 
 	theMap->Update(worldContext);
+	
+	if (theCollision != nullptr)
+		theCollision->Update(worldContext);
 
 	worldContext.frameCount++;
 }
@@ -77,7 +85,7 @@ void CScene::Tick(float deltaTime, double worldTime)
 void CScene::Draw()
 {
 	auto comp = [this](CRenderObject* const &a, CRenderObject* const &b) {
-		return a->	CalcZ(renderContext) > b->CalcZ(renderContext);
+		return a->CalcZ(renderContext) > b->CalcZ(renderContext);
 	};
 
 	// TODO: Cap z depth to far clip. (or maybe 2x far clip)
@@ -294,19 +302,10 @@ void CScene::GUI()
 
 	if (ImGui::Begin("Collision"))
 	{
-		static bool visible = true;
-		static float opacity = 0.5f;
-		ImGui::Checkbox("Show in viewport", &visible);
-		ImGui::SliderFloat("Opacity", &opacity, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-		ImGui::Text("Collision Sets Loaded: 0");
-		ImGui::Text("Verts: 0");
-		ImGui::Text("Faces: 0");
-		ImGui::Text("Grid:");
-		ImGui::Text("  Extents X: 0.0 -> 0.0");
-		ImGui::Text("  Extents Y: 0.0 -> 0.0");
-		ImGui::Text("  Extents Z: 0.0 -> 0.0");
-		ImGui::Text("  Cell Size: 0.0");
-		ImGui::Text("  Cells: 0, 0, 0");
+		if (theCollision != nullptr)
+			theCollision->GUI();
+		else
+			ImGui::Text("No Collision Loaded.");
 	}
 	ImGui::End();
 }

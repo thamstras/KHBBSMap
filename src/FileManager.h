@@ -2,6 +2,13 @@
 #include <string>
 #include <filesystem>
 
+enum FileTypes
+{
+	FILE_PMP,
+	FILE_PVD,
+	FILE_BCD
+};
+
 class FileManager
 {
 public:
@@ -13,7 +20,7 @@ public:
 	void GetFontCPath(const std::string& fontName, char* buffer, size_t buffer_len);
 	void GetShaderCPath(const std::string& shaderName, char* buffer, size_t buffer_len);
 
-	bool OpenFileWindow(std::string& out_filePath);
+	bool OpenFileWindow(std::string& out_filePath, FileTypes type);
 	bool GetExportFolder(std::string& out_path);
 
 	void SetBBSRoot(const std::string& root_path);

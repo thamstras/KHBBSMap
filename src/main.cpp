@@ -13,6 +13,7 @@
 #include "Core\CCamera.h"
 #include "Core\World.h"
 #include "Core\CFramebuffer.h"
+#include "Graphics\GlDebug.h"
 
 #include "BBS\CScene.h"
 #include "BBS\CMap.h"
@@ -85,6 +86,7 @@ double g_worldTime = 0.0f;
 bool gui_show_metrics = false;
 
 bool g_loadNewMap = false;
+bool g_loadCollision = false;
 
 bool g_mouseOverViewport = false;
 
@@ -195,11 +197,11 @@ bool init(FileManager& fileManager)
 
 	glfwInit();
 	std::cout << "[GS] Compiled with GLFW " << glfwGetVersionString() << std::endl;
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
-	//glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 	if (USE_ANTIALIASING) glfwWindowHint(GLFW_SAMPLES, 4);
 
 	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "KHBBSMap", NULL, NULL);
@@ -224,13 +226,14 @@ bool init(FileManager& fileManager)
 		return false;
 	}
 
+	Graphics::GlDebug::Init();
 	//setupGLDebug();
 
-	if (GLAD_GL_EXT_texture_filter_anisotropic)
+	if (GLAD_GL_ARB_texture_filter_anisotropic)
 	{
 		std::cout << "[GS] Loaded extention GL_EXT_texture_filter_anisotropic!" << std::endl;
 		float max_anis;
-		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anis);
+		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &max_anis);
 		std::cout << "[GS] Max anisotropic samples: " << max_anis << std::endl;
 	}
 
@@ -359,6 +362,13 @@ void gui_DrawSystemGui(FileManager& fileManager)
 		if (ImGui::MenuItem("Export...")) shouldExport = true;
 		ImGui::Separator();
 		if (ImGui::MenuItem("Exit")) shouldExit = true;
+		ImGui::EndMenu();
+	}
+
+	if (ImGui::BeginMenu("Collision"))
+	{
+		if (ImGui::MenuItem("Load..."))
+			g_loadCollision = true;
 		ImGui::EndMenu();
 	}
 
@@ -511,7 +521,7 @@ void gui_DrawEnvGui(FileManager& fileManager, RenderContext& context)
 	if (loadPVD)
 	{
 		std::string path;
-		if (fileManager.OpenFileWindow(path))
+		if (fileManager.OpenFileWindow(path, FILE_PVD))
 		{
 			// TODO: better.
 			std::FILE* file = std::fopen(path.c_str(), "rb");
@@ -635,7 +645,7 @@ void gui_draw(FileManager& fileManager)
 void LoadNewMap(FileManager& fileManager, RenderContext renderContext)
 {
 	std::string newFile;
-	if (fileManager.OpenFileWindow(newFile))
+	if (fileManager.OpenFileWindow(newFile, FILE_PMP))
 	{
 		//UnloadBBSMap();
 		//LoadBBSMap(newFile);
@@ -644,6 +654,8 @@ void LoadNewMap(FileManager& fileManager, RenderContext renderContext)
 		//LoadMapObjects();
 		g_theScene->theMap->Clear();
 		g_theScene->theMap->LoadMapFile(newFile);
+		if (g_theScene->theCollision != nullptr)
+			delete g_theScene->theCollision;
 
 		renderContext.debug.obj_id = 0;
 		renderContext.debug.section_id = 0;
@@ -678,7 +690,7 @@ int main(int argc, char **argv)
 		terminate();
 	}
 
-	if (!fileManager.OpenFileWindow(loadPath))
+	if (!fileManager.OpenFileWindow(loadPath, FILE_PMP))
 	{
 		return 0;
 	}
@@ -720,6 +732,8 @@ int main(int argc, char **argv)
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
+		ImGui::ShowDemoWindow();
+
 		processInput(g_window.window);
 
 		//Render_StartFrame(globalRenderContext);
@@ -754,6 +768,17 @@ int main(int argc, char **argv)
 			LoadNewMap(fileManager, g_theScene->renderContext);
 		}
 
+		if (g_loadCollision)
+		{
+			g_loadCollision = false;
+			if (g_theScene->theCollision == nullptr)
+				g_theScene->theCollision = new BBS::CCollision();
+			std::string newFile;
+			if (fileManager.OpenFileWindow(newFile, FILE_BCD))
+			{
+				g_theScene->theCollision->LoadBcdFile(newFile);
+			}
+		}
 	}
 
 	/*ImGui_ImplOpenGL3_Shutdown();

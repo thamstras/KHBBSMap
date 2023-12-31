@@ -78,6 +78,12 @@ struct NewShaderDef
 	std::vector<std::pair<UniformSemantic, std::string>> UniformMap;
 };*/
 
+class ShaderAttrib
+{
+public:
+	static constexpr std::string Position = std::string("Position");
+};
+
 class CShader
 {
 public:

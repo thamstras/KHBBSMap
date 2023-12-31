@@ -116,7 +116,7 @@ void FileManager::GetShaderCPath(const std::string& shaderName, char* buffer, si
 	buffer[buffer_len - 1] = '\0';
 }
 
-bool FileManager::OpenFileWindow(std::string& out_filePath)
+bool FileManager::OpenFileWindow(std::string& out_filePath, FileTypes type)
 {
 	fs::path orignalPath = fs::current_path();
 	
@@ -127,13 +127,31 @@ bool FileManager::OpenFileWindow(std::string& out_filePath)
 	ZeroMemory(&ofn, sizeof(ofn));
 
 	ofn.lStructSize = sizeof(OPENFILENAME);
-	ofn.lpstrFilter = TEXT("All Files\0*.*\0\0");
+	//ofn.lpstrFilter = TEXT("All Files\0*.*\0\0");
 	ofn.lpstrFile = filename;
 	ofn.nMaxFile = MAX_PATH;
 	ofn.lpstrInitialDir = resourcesPath.c_str();
 	ofn.lpstrTitle = TEXT("Select a File");
 	ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
-	ofn.lpstrDefExt = TEXT("pmp");
+	//ofn.lpstrDefExt = TEXT("pmp");
+
+	switch (type)
+	{
+	case FILE_PMP:
+		ofn.lpstrFilter = TEXT("BBS Map\0*.pmp\0All Files\0*.*\0\0");
+		ofn.lpstrDefExt = TEXT("pmp");
+		break;
+	case FILE_PVD:
+		ofn.lpstrFilter = TEXT("BBS Env\0*.pvd\0All Files\0*.*\0\0");
+		ofn.lpstrDefExt = TEXT("pvd");
+		break;
+	case FILE_BCD:
+		ofn.lpstrFilter = TEXT("BBS Map Collision\0*.bcd\0All Files\0*.*\0\0");
+		ofn.lpstrDefExt = TEXT("bcd");
+		break;
+	default:
+		break;
+	}
 
 	if (GetOpenFileName(&ofn))
 	{
