@@ -8,6 +8,7 @@ class CFramebuffer
 	
 	
 	bool isMultiSampled;
+	int sampleCount;
 	GLuint FBO2, RBO2;
 	GLuint multiSampleBuffer;
 
@@ -28,4 +29,6 @@ public:
 
 	void Bind();
 	GLuint ResolveTexture();
+
+	void Resize(GLuint newWidth, GLuint newHeight);
 };

@@ -49,3 +49,18 @@ struct V_P3C3
 	static const int memberCount = 6;
 	static const bool supportsTextures = false;
 };
+
+// Skel mesh?
+struct V_P3C4T2W8
+{
+	float x, y, z;
+	float r, g, b, w;
+	float u, v;
+	float w0, w1, w2, w3;
+	float w4, w5, w6, w7;
+
+	static void BindVAO();
+
+	static const int memberCount = 17;
+	static const bool supportsTextures = true;
+};

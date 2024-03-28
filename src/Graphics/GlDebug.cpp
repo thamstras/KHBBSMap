@@ -48,6 +48,9 @@ void GlDebug::Init()
 	glEnable(GL_DEBUG_OUTPUT);
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 	glDebugMessageCallback(message_callback, nullptr);
+	//API, OTHER, NOTIFICATION, 131185
+	GLuint msgId = 131185u;
+	glDebugMessageControl(GL_DEBUG_SOURCE_API, GL_DEBUG_TYPE_OTHER, GL_DEBUG_SEVERITY_NOTIFICATION, 1, &msgId, GL_FALSE);
 }
 
 void GlDebug::DeInit()

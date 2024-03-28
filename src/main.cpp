@@ -34,12 +34,20 @@
 [ ] Export FBX
 [ ] Texture overrides (probably going to need some kind of TextureManager.
 [ ] Load map file from command line
-[ ] Load BCD
+[X] Load BCD
 [ ] Save As PMP
 [ ] Import/Export PMO
 [ ] Enable/Disable texture filtering + Framebuffer color depth at runtime (BBS<->PC mode)
-[ ] Resize viewport
+[/] Resize viewport (viewport resizes, perspective doesn't...)
 [ ] Load OLO (will need FileManager overhaul)
+
+widget viewport with it's own camera and IRenderObject list that uses ImGui dragging/scrolling features (they must be in there somewhere) to control it's camera
+
+CApp
+	CScene
+	CViewport
+	CMeshViewer
+	CTextureViewer
 
 */
 
@@ -89,6 +97,7 @@ bool g_loadNewMap = false;
 bool g_loadCollision = false;
 
 bool g_mouseOverViewport = false;
+glm::vec2 g_viewportDesiredSize;
 
 // #### CALLBACKS ####
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
@@ -226,7 +235,7 @@ bool init(FileManager& fileManager)
 		return false;
 	}
 
-	Graphics::GlDebug::Init();
+	//Graphics::GlDebug::Init();
 	//setupGLDebug();
 
 	if (GLAD_GL_ARB_texture_filter_anisotropic)
@@ -611,6 +620,8 @@ void gui_Viewport()
 	GLuint sceneTexture = g_sceneBuffer->ResolveTexture();
 	ImGui::Image((void*)(intptr_t)(sceneTexture), ImVec2(g_sceneBuffer->Width(), g_sceneBuffer->Height()), ImVec2(0, 1), ImVec2(1, 0));
 	g_mouseOverViewport = ImGui::IsWindowFocused();	// TODO: This needs to get to the input processing somehow
+	ImVec2 viewSize = ImGui::GetWindowSize();
+	g_viewportDesiredSize = glm::vec2(viewSize.x, viewSize.y);
 	ImGui::End();
 	ImGui::PopStyleVar();
 }
@@ -655,7 +666,10 @@ void LoadNewMap(FileManager& fileManager, RenderContext renderContext)
 		g_theScene->theMap->Clear();
 		g_theScene->theMap->LoadMapFile(newFile);
 		if (g_theScene->theCollision != nullptr)
+		{
 			delete g_theScene->theCollision;
+			g_theScene->theCollision = nullptr;
+		}
 
 		renderContext.debug.obj_id = 0;
 		renderContext.debug.section_id = 0;
@@ -779,6 +793,11 @@ int main(int argc, char **argv)
 				g_theScene->theCollision->LoadBcdFile(newFile);
 			}
 		}
+
+		// TODO: The new size here needs to get passed down into the projectionMatrix calculated in CScene::StartFrame()
+		if ((g_viewportDesiredSize.x > 1.0f && g_viewportDesiredSize.y > 1.0f)
+			&& (g_sceneBuffer->Width() != g_viewportDesiredSize.x || g_sceneBuffer->Height() != g_viewportDesiredSize.y))
+			g_sceneBuffer->Resize(g_viewportDesiredSize.x, g_viewportDesiredSize.y);
 	}
 
 	/*ImGui_ImplOpenGL3_Shutdown();

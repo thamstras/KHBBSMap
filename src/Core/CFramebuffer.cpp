@@ -3,7 +3,7 @@
 CFramebuffer::CFramebuffer(GLuint width, GLuint height, int samples) :
 	width(width), height(height),
 	FBO(0), RBO(0), texColorBuffer(0),
-	isMultiSampled(samples > 1), FBO2(0), RBO2(0), multiSampleBuffer(0)
+	isMultiSampled(samples > 1), sampleCount(samples), FBO2(0), RBO2(0), multiSampleBuffer(0)
 {
 
 	GLint old_fbo;
@@ -41,6 +41,7 @@ CFramebuffer::CFramebuffer(GLuint width, GLuint height, int samples) :
 		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, samples, GL_RGB, width, height, GL_TRUE);
 		glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
 
 		glGenRenderbuffers(1, &RBO2);
 		glBindRenderbuffer(GL_RENDERBUFFER, RBO2);
@@ -87,7 +88,7 @@ CFramebuffer::CFramebuffer(CFramebuffer&& other) noexcept :
 	width(other.width), height(other.height),
 	FBO(std::exchange(other.FBO, 0)), RBO(std::exchange(other.RBO, 0)),
 	texColorBuffer(std::exchange(other.texColorBuffer, 0)),
-	isMultiSampled(other.isMultiSampled),
+	isMultiSampled(other.isMultiSampled), sampleCount(other.sampleCount),
 	FBO2(std::exchange(other.FBO2, 0)), RBO2(std::exchange(other.RBO2, 0)),
 	multiSampleBuffer(std::exchange(other.multiSampleBuffer, 0))
 {}
@@ -105,6 +106,7 @@ CFramebuffer& CFramebuffer::operator=(CFramebuffer&& other) noexcept
 	RBO = std::exchange(other.RBO, 0);
 	texColorBuffer = std::exchange(other.texColorBuffer, 0);
 	isMultiSampled = other.isMultiSampled;
+	sampleCount = other.sampleCount;
 	FBO2 = std::exchange(other.FBO2, 0);
 	RBO2 = std::exchange(other.RBO2, 0);
 	multiSampleBuffer = std::exchange(other.multiSampleBuffer, 0);
@@ -139,4 +141,37 @@ GLuint CFramebuffer::ResolveTexture()
 	glBindFramebuffer(GL_FRAMEBUFFER, old_fbo);
 
 	return texColorBuffer;
+}
+
+void CFramebuffer::Resize(GLuint newWidth, GLuint newHeight)
+{
+	if (newWidth == width && newHeight == height)
+		return;
+
+	GLint curr_fbo;
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &curr_fbo);
+	if (curr_fbo == FBO || (isMultiSampled && curr_fbo == FBO2))
+		throw std::exception("Cannot resize Framebuffer while bound!");
+
+	width = newWidth;
+	height = newHeight;
+
+	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+	if (isMultiSampled)
+	{
+		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, multiSampleBuffer);
+		glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, sampleCount, GL_RGB, width, height, GL_TRUE);
+		glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+
+		glBindRenderbuffer(GL_RENDERBUFFER, RBO2);
+		glRenderbufferStorageMultisample(GL_RENDERBUFFER, sampleCount, GL_DEPTH24_STENCIL8, width, height);
+		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	}
 }
