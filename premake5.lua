@@ -1,9 +1,9 @@
 
 -- NOTE: Requires at least Premake5 beta 1 for ccpdialect and vs2022 support.
 
- -- NOTE: I built GLFW and ASSIMP from source. If you're using a binary distribution you may need to change some paths down below.
-GLFW_PATH = "C:/Repos/Libraries/glfw/3.3-dll/"
-GLM_PATH = "C:/Repos/Libraries/glm/0.9.9.6/"
+ -- NOTE: I built ASSIMP from source. If you're using a binary distribution you may need to change some paths down below.
+GLFW_PATH = "C:/Repos/Libraries/glfw/glfw-3.4.bin.WIN32/"
+GLM_PATH = "C:/Repos/Libraries/glm/1.0.1/"
 GLI_PATH = "C:/Repos/Libraries/gli/0.8.2.0/"
 ASSIMP_PATH = "C:/Repos/Libraries/assimp/5.0.1/"
 
@@ -45,7 +45,7 @@ workspace "KHBBSMap"
 		filter({})
 		
 		-- GLM
-        includedirs(GLM_PATH)
+        includedirs(GLM_PATH .. "include")
 
         -- GLI (Not used?)
         includedirs(GLI_PATH)
@@ -54,13 +54,13 @@ workspace "KHBBSMap"
         includedirs(GLFW_PATH .. "include")
         defines("GLFW_DLL")
         links("glfw3dll")
-        filter("configurations:Debug")
-            postbuildcommands("{COPY} " .. GLFW_PATH .. "Win32/src/Debug/glfw3.dll %{cfg.targetdir}")
-            postbuildcommands("{COPY} " .. GLFW_PATH .. "Win32/src/Debug/glfw3.pdb %{cfg.targetdir}")
-            libdirs(GLFW_PATH .. "Win32/src/Debug")
-        filter("configurations:Release")
-            postbuildcommands("{COPY} ".. GLFW_PATH .. "Win32/src/Release/glfw3.dll %{cfg.targetdir}")
-            libdirs(GLFW_PATH .. "Win32/src/Release")
+        --filter("configurations:Debug")
+        --    postbuildcommands("{COPY} " .. GLFW_PATH .. "lib-vc2022/glfw3.dll %{cfg.targetdir}")
+        --    postbuildcommands("{COPY} " .. GLFW_PATH .. "lib-vc2022/glfw3.pdb %{cfg.targetdir}")
+        --    libdirs(GLFW_PATH .. "lib-vc2022")
+        --filter("configurations:Release")
+            postbuildcommands("{COPY} ".. GLFW_PATH .. "lib-vc2022/glfw3.dll %{cfg.targetdir}")
+            libdirs(GLFW_PATH .. "lib-vc2022")
             --libdirs(GLFW_PATH .. "src/RelWithDebInfo") -- NOTE: you'll need to change the postbuildcommands as well.
         filter({})
 
