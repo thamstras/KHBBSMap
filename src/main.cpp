@@ -226,7 +226,7 @@ bool init(FileManager& fileManager)
 		return false;
 	}
 
-	Graphics::GlDebug::Init();
+	//Graphics::GlDebug::Init();
 	//setupGLDebug();
 
 	if (GLAD_GL_ARB_texture_filter_anisotropic)
@@ -609,7 +609,7 @@ void gui_Viewport()
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(1, 1));
 	ImGui::Begin("Viewport", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoBringToFrontOnFocus);
 	GLuint sceneTexture = g_sceneBuffer->ResolveTexture();
-	ImGui::Image((void*)(intptr_t)(sceneTexture), ImVec2(g_sceneBuffer->Width(), g_sceneBuffer->Height()), ImVec2(0, 1), ImVec2(1, 0));
+	ImGui::Image((uintptr_t)(sceneTexture), ImVec2(g_sceneBuffer->Width() * 3.f, g_sceneBuffer->Height() * 3.f), ImVec2(0, 1), ImVec2(1, 0));
 	g_mouseOverViewport = ImGui::IsWindowFocused();	// TODO: This needs to get to the input processing somehow
 	ImGui::End();
 	ImGui::PopStyleVar();
@@ -620,7 +620,7 @@ void gui_draw(FileManager& fileManager)
 	// Top menu bar
 	gui_DrawSystemGui(fileManager);
 
-	ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+	ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 
 	gui_Viewport();
 
