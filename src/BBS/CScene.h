@@ -15,8 +15,12 @@ namespace BBS
 		void StartFrame();
 		
 		CMapInstance* pSelectedInstance = nullptr;
+		CModelObject* pSelectedModel = nullptr;
+		CTextureInfo* pSelectedTexture = nullptr;
 
 		void SelectInstance(int idx);
+
+		void SelectModel(int idx);
 
 	public:
 		CMap* theMap;	// All the map geometry. PMP
@@ -39,5 +43,7 @@ namespace BBS
 		void ProcessKeyboard(GLFWwindow *window);
 		void ProcessMouse(float deltaX, float deltaY);
 		void ProcessMouseScroll(double amount);
+
+		void PreUnload();
 	};
 }

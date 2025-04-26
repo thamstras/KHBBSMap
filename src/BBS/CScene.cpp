@@ -217,6 +217,20 @@ void CScene::SelectInstance(int idx)
 	}
 }
 
+void CScene::SelectModel(int idx)
+{
+	if (idx >= (int)theMap->objects.size() || idx < -1)
+		throw std::exception("instance idx out of range");
+
+	pSelectedModel = nullptr;
+	if (idx != -1)
+	{
+		auto pModel = theMap->objects[idx];
+		if (pModel != nullptr)
+			pSelectedModel = theMap->objects[idx];
+	}
+}
+
 void CScene::GUI()
 {
 	if (ImGui::Begin("Instances"))
@@ -255,7 +269,8 @@ void CScene::GUI()
 			ImGui::Text("Scale:    {%2.f, %2.f, %2.f}", pSelectedInstance->scale[0], pSelectedInstance->scale[1], pSelectedInstance->scale[2]);
 			ImGui::Text("Flags:    0x%04X", pSelectedInstance->flags);
 			ImGui::Text("Model ID: %d", pSelectedInstance->objectID);
-			ImGui::Button("Select Model");
+			if (ImGui::Button("Select Model"))
+				SelectModel(pSelectedInstance->objectID);
 			ImGui::Text("####EXPERIMENT####");
 			if (!(pSelectedInstance->flags & INSTANCE_FLAGS::FLAG_SKYBOX))
 			{
@@ -275,17 +290,20 @@ void CScene::GUI()
 		{
 			for (int i = 0; i < (int)theMap->objects.size(); i++)
 			{
-				if (theMap->objects[i] == nullptr)
+				std::string label;
+				CModelObject* pObject = theMap->objects[i];
+				
+				if (pObject == nullptr)
 				{
-					std::string label = string_format("%d Empty Slot", i);
-					ImGui::Selectable(label.c_str(), false);
+					label = string_format("%d Empty Slot", i);
 				}
 				else
 				{
-					CModelObject* pObject = theMap->objects[i];
-					std::string label = string_format("Model %d: Sections %d/%d Scale %2.f Textures %d", i, pObject->sections.size(), pObject->transSections.size(), pObject->scale, pObject->textureNames.size());
-					ImGui::Selectable(label.c_str(), false);
+					label = string_format("Model %d: Sections %d/%d Scale %2.f Textures %d", i, pObject->sections.size(), pObject->transSections.size(), pObject->scale, pObject->textureNames.size());
 				}
+				
+				if (ImGui::Selectable(label.c_str(), pSelectedModel == pObject && pObject != nullptr))
+					SelectModel(i);
 			}
 			ImGui::EndListBox();
 		}
@@ -294,9 +312,57 @@ void CScene::GUI()
 			// TODO
 			//theMap->objects.push_back(nullptr);
 		}
+		if (pSelectedModel)
+		{
+			ImGui::SameLine();
+			if (ImGui::Button("Deselect"))
+			{
+				SelectModel(-1);
+			}
+		}
 		ImGui::Separator();
 		ImGui::Text("Selected Model");
-		ImGui::Text("NYI");
+		if (pSelectedModel)
+		{
+			ImGui::Text("Scale: %2.f", pSelectedModel->scale);
+			for (int i = 0; i < 8; i++)
+				ImGui::Text("BBox[%d]: {%2.f, %2.f, %2.f, %2.f}", i, pSelectedModel->bbox[i].x, pSelectedModel->bbox[i].y, pSelectedModel->bbox[i].z, pSelectedModel->bbox[i].w);
+			if (ImGui::TreeNode("Textures"))
+			{
+				for (auto pTexInfo : pSelectedModel->textureObjects)
+				{
+					ImGui::Button("Select");
+					ImGui::SameLine();
+					ImGui::Text(pTexInfo->name.c_str());
+				}
+				ImGui::TreePop();
+			}
+			if (ImGui::TreeNode("Chain 0"))
+			{
+				for (int i = 0; i < pSelectedModel->sections.size(); i++)
+				{
+					auto pSection = pSelectedModel->sections[i];
+					ImGui::Text("[%d] Vc: %d T: %d Dc: %d A: %hX", i, pSection->vertexCount, pSection->textureIndex, pSection->primCount.size(), pSection->attributes);
+				}
+				ImGui::TreePop();
+			}
+			if (pSelectedModel->transSections.size() > 0)
+			{
+				if (ImGui::TreeNode("Chain 1"))
+				{
+					for (int i = 0; i < pSelectedModel->transSections.size(); i++)
+					{
+						auto pSection = pSelectedModel->transSections[i];
+						ImGui::Text("[%d] Vc: %d T: %d Dc: %d A: %hX", i, pSection->vertexCount, pSection->textureIndex, pSection->primCount.size(), pSection->attributes);
+					}
+					ImGui::TreePop();
+				}
+			}
+		}
+		else
+		{
+			ImGui::Text("None");
+		}
 	}
 	ImGui::End();
 
@@ -308,4 +374,10 @@ void CScene::GUI()
 			ImGui::Text("No Collision Loaded.");
 	}
 	ImGui::End();
+}
+
+void CScene::PreUnload()
+{
+	SelectInstance(-1);
+	SelectModel(-1);
 }

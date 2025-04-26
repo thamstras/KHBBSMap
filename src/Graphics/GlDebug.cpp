@@ -48,6 +48,8 @@ void GlDebug::Init()
 	glEnable(GL_DEBUG_OUTPUT);
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 	glDebugMessageCallback(message_callback, nullptr);
+	const GLuint ids[] = { 131185 };
+	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 1, ids, GL_FALSE);
 }
 
 void GlDebug::DeInit()

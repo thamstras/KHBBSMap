@@ -31,6 +31,7 @@ void CMap::LoadMapFile(std::string filePath)
 	this->textures.reserve(pmpFile.header.tex_count);
 
 	// TODO: this->objects would be better as some kind of sparse array
+	// TODO: Pre-scan instances to right size the objects vector first time around.
 	// Create instances, loading the actual models as we go
 	unsigned int instIdx = 0;
 	for (PmpInstance& inst : pmpFile.instances)

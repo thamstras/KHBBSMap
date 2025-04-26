@@ -30,15 +30,17 @@
 [X] Get multisampling implimented in new viewport
 [X] Move imgui to docking branch
 [X] Write new GUI stuff
-[ ] GET THE TEXTURE VIEWER WORKING AGAIN
-[ ] Export FBX
-[ ] Texture overrides (probably going to need some kind of TextureManager.
-[ ] Load map file from command line
-[ ] Load BCD
-[ ] Save As PMP
-[ ] Import/Export PMO
-[ ] Enable/Disable texture filtering + Framebuffer color depth at runtime (BBS<->PC mode)
+[X] Load BCD
+[/] GET THE TEXTURE VIEWER WORKING AGAIN
 [ ] Resize viewport
+[ ] Load map file from command line
+[ ] Load multi file from ARC
+[ ] Export FBX
+[ ] Import/Export PMO
+[ ] Save As PMP
+[ ] Texture overrides (ie: Load remastered textures) (probably going to need some kind of TextureManager.)
+[ ] Enable/Disable texture filtering + Framebuffer color depth at runtime (BBS<->PC mode)
+	[ ] Bonus: Dither matrix?
 [ ] Load OLO (will need FileManager overhaul)
 
 */
@@ -652,6 +654,9 @@ void LoadNewMap(FileManager& fileManager, RenderContext renderContext)
 		//ParseLoadedMap();
 		//LoadMapTextures();
 		//LoadMapObjects();
+
+		g_theScene->PreUnload();
+
 		g_theScene->theMap->Clear();
 		g_theScene->theMap->LoadMapFile(newFile);
 		if (g_theScene->theCollision != nullptr)
