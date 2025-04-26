@@ -231,6 +231,13 @@ void CScene::SelectModel(int idx)
 	}
 }
 
+void CScene::SelectTexture(std::string name)
+{
+	auto itr = theMap->textures.find(name);
+	if (itr != theMap->textures.end())
+		pSelectedTexture = itr->second;
+}
+
 void CScene::GUI()
 {
 	if (ImGui::Begin("Instances"))
@@ -356,6 +363,86 @@ void CScene::GUI()
 						ImGui::Text("[%d] Vc: %d T: %d Dc: %d A: %hX", i, pSection->vertexCount, pSection->textureIndex, pSection->primCount.size(), pSection->attributes);
 					}
 					ImGui::TreePop();
+				}
+			}
+		}
+		else
+		{
+			ImGui::Text("None");
+		}
+	}
+	ImGui::End();
+
+	if (ImGui::Begin("Textures"))
+	{
+		if (ImGui::BeginListBox("##empty", ImVec2(-FLT_MIN, 0.0f)))
+		{
+			for (auto& pair : theMap->textures)
+			{
+				if (ImGui::Selectable(pair.first.c_str(), pSelectedTexture == pair.second))
+					SelectTexture(pair.first);
+			}
+
+			ImGui::EndListBox();
+		}
+		
+		if (ImGui::Button("Add Texture"))
+		{
+			// TODO
+			//theMap->objects.push_back(nullptr);
+		}
+		if (pSelectedTexture)
+		{
+			ImGui::SameLine();
+			if (ImGui::Button("Deselect"))
+			{
+				SelectTexture("");
+			}
+		}
+
+		ImGui::Separator();
+
+		ImGui::Text("Selected texture");
+		if (pSelectedTexture != nullptr)
+		{
+			ImGui::Text("Name: %s", pSelectedTexture->name.c_str());
+			ImGui::Text("Scroll Speed: {%2.f %2.f}", pSelectedTexture->scrollSpeed_x, pSelectedTexture->scrollSpeed_y);
+			if (pSelectedTexture->srcTexture != nullptr)
+			{
+				auto pTexObj = pSelectedTexture->srcTexture;
+				
+				const char* imgTypeStr;
+				switch (pTexObj->imageType)
+				{
+				case IMG_TYPE::IT_RGBA: imgTypeStr = "IT_RGBA"; break;
+				case IMG_TYPE::IT_CLUT4: imgTypeStr = "IT_CLUT4"; break;
+				case IMG_TYPE::IT_CLUT8: imgTypeStr = "IT_CLUT8"; break;
+				default: imgTypeStr = "UNKNOWN"; break;
+				}
+
+				const char* clutTypeStr;
+				switch (pTexObj->clutType)
+				{
+				case CLT_TYPE::CT_NONE: clutTypeStr = "CT_NONE"; break;
+				case CLT_TYPE::CT_A1BGR5: clutTypeStr = "CT_A1BGR5"; break;
+				case CLT_TYPE::CT_XBGR8: clutTypeStr = "CT_XBGR8"; break;
+				case CLT_TYPE::CT_ABGR8: clutTypeStr = "CT_ABGR8"; break;
+				}
+				
+				ImGui::Text("Image Type: %d (%s)", (int)pTexObj->imageType, imgTypeStr);
+				ImGui::Text("Image Size: {%d %d}", pTexObj->imageWidth, pTexObj->imageHeight);
+				ImGui::Text("Clut Type: %d (%s)", (int)pTexObj->clutType, clutTypeStr);
+				ImGui::Text("Clut Size: %d", pTexObj->clutCount);
+				ImGui::Text("Tex Size: {%d %d}", pTexObj->textureWidth, pTexObj->textureHeight);
+
+				ImGui::Separator();
+
+				if (pTexObj->textureWidth > 0 && pTexObj->texture != nullptr)
+				{
+					float maxW = ImGui::GetContentRegionAvail().x;
+					maxW -= 2.0f * ImGui::GetStyle().ImageBorderSize;
+					float scale = maxW / (float)pTexObj->textureWidth;
+					ImGui::Image((ImTextureID)pTexObj->texture->getOglId(), ImVec2(scale * (float)pTexObj->textureWidth, scale * (float)pTexObj->textureHeight));
 				}
 			}
 		}

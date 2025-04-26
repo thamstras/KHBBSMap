@@ -19,8 +19,8 @@ namespace BBS
 		CTextureInfo* pSelectedTexture = nullptr;
 
 		void SelectInstance(int idx);
-
 		void SelectModel(int idx);
+		void SelectTexture(std::string name);
 
 	public:
 		CMap* theMap;	// All the map geometry. PMP
