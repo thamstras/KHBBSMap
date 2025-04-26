@@ -17,6 +17,7 @@
 
 #include "BBS\CScene.h"
 #include "BBS\CMap.h"
+#include "FileTypes\BbsPvd.h"
 
 #include "glm/gtc/type_ptr.hpp"
 
@@ -525,38 +526,15 @@ void gui_DrawEnvGui(FileManager& fileManager, RenderContext& context)
 		std::string path;
 		if (fileManager.OpenFileWindow(path, FILE_PVD))
 		{
-			// TODO: better.
-			std::FILE* file = std::fopen(path.c_str(), "rb");
-			char magic[4];
-			std::fread(magic, 1, 4, file);
-			if (memcmp(magic, "PVD\0", 4) != 0)
-			{
-				std::cerr << "Not a valid PVD file!" << std::endl;
-				return;
-			}
-
-			// fog color
-			std::fseek(file, 0x10, SEEK_SET);
-			glm::u8vec4 colorIn;
-			std::fread((void*)(glm::value_ptr(colorIn)), sizeof(glm::u8), 4, file);
-			context.env.fogColor = glm::vec4((float)colorIn.r / 255.0f, (float)colorIn.g / 255.0f, (float)colorIn.b / 255.0f, (float)colorIn.a / 255.0f);
-
-			std::fread((void*)(&context.env.fogNear), sizeof(float), 1, file);
-			std::fread((void*)(&context.env.fogFar), sizeof(float), 1, file);
-			std::fread((void*)(&context.render.nearClip), sizeof(float), 1, file);
-			std::fread((void*)(&context.render.farClip), sizeof(float), 1, file);
-
-			// clear color
-			std::fseek(file, 0x28, SEEK_SET);
-			std::fread((void*)(glm::value_ptr(colorIn)), sizeof(glm::u8), 4, file);
-			context.env.clearColor = glm::vec4((float)colorIn.r / 255.0f, (float)colorIn.g / 255.0f, (float)colorIn.b / 255.0f, (float)colorIn.a / 255.0f);
-
-			std::fseek(file, 0x30, SEEK_SET);
-			float viewIn;
-			std::fread((void*)(&viewIn), sizeof(float), 1, file);
-			g_theScene->camera.Zoom = glm::degrees(viewIn);
-
-			std::fclose(file);
+			std::ifstream fs = std::ifstream(path, std::ios_base::binary);
+			PvdFile pvd = PvdFile::ReadPvdFile(fs, 0);
+			context.env.fogColor = glm::vec4((float)pvd.data.fogColor[0] / 255.0f, (float)pvd.data.fogColor[1] / 255.0f, (float)pvd.data.fogColor[2] / 255.0f, (float)pvd.data.fogColor[3] / 255.0f);
+			context.env.fogNear = pvd.data.fogStart;
+			context.env.fogFar = pvd.data.fogEnd;
+			context.render.nearClip = pvd.data.nearClip;
+			context.render.farClip = pvd.data.farClip;
+			context.env.clearColor = glm::vec4((float)pvd.data.clearColor[0] / 255.0f, (float)pvd.data.clearColor[1] / 255.0f, (float)pvd.data.clearColor[2] / 255.0f, (float)pvd.data.clearColor[3] / 255.0f);
+			g_theScene->camera.Zoom = glm::degrees(pvd.data.fov);
 		}
 	}
 }
